@@ -11,13 +11,13 @@ func TestToCamelCase(t *testing.T) {
 		input    string
 		expected string
 	}{
-		{"hello_world", "HelloWorld"},        // 基本ケース
-		{"test_case_function", "TestCaseFunction"}, // 複数のアンダースコア
-		{"AlreadyCamelCase", "AlreadyCamelCase"}, // 既にCamelCase
-		{"simple_test", "SimpleTest"},        // 全小文字
-		{"", ""},                             // 空文字
-		{"multiple__underscores", "MultipleUnderscores"}, // アンダースコアが連続するケース
-		{"with_numbers_123", "WithNumbers123"}, // 数字を含むケース
+		{"hello_world", "HelloWorld"},
+		{"test_case_function", "TestCaseFunction"},
+		{"AlreadyCamelCase", "AlreadyCamelCase"},
+		{"simple_test", "SimpleTest"},
+		{"", ""},
+		{"multiple__underscores", "MultipleUnderscores"},
+		{"with_numbers_123", "WithNumbers123"},
 	}
 
 	for _, tt := range tests {
