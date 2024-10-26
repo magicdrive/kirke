@@ -1,7 +1,7 @@
 Usage: kirke [OPTIONS] [ARGUMENTS]
 
 Description:
-  Kirke is a command-line tool for converting JSON strings into Golang struct definitions.
+   Kirke is a command-line tool for converting JSON strings into Golang struct definitions.
    It’s designed to be flexible, allowing for JSON input from both files and pipes,
    and it handles pointer types for nested structures when specified.
 
