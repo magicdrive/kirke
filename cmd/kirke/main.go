@@ -12,7 +12,7 @@ import (
 func main() {
 	optlength, opt, err := commandline.OptParse(os.Args[1:])
 	if err != nil {
-		log.Fatalf("Faital Error: %v", err)
+		log.Fatalf("Faital Error: %v\n", err)
 	}
 
 	if optlength < 1 || opt.HelpFlag {
@@ -22,7 +22,7 @@ func main() {
 
 	jsonStr, err := opt.DesideJSONStr()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error %v", err)
+		fmt.Fprintf(os.Stderr, "Error %v\n", err)
 	} else if jsonStr == "" {
 		opt.FlagSet.Usage()
 		os.Exit(0)
@@ -30,7 +30,8 @@ func main() {
 
 	result, err := core.Apply(jsonStr, opt.RootObjName, opt.WithPointerFlag)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error %v", err)
+		fmt.Fprintf(os.Stderr, "Error %v\n", err)
 	}
+
 	commandline.GracefulPrintOut(result, opt.NoPagerFlag)
 }

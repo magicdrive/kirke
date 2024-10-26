@@ -40,7 +40,7 @@ func TestGracefulPrintOut_NoPagerFlag(t *testing.T) {
 	_, _ = buf.ReadFrom(r)
 
 	// Expected output includes a newline
-	expected := message + "\n"
+	expected := message
 	if buf.String() != expected {
 		t.Errorf("Expected output %q, got %q", expected, buf.String())
 	}
@@ -73,7 +73,7 @@ func TestGracefulPrintOut_WithPaging(t *testing.T) {
 	_, _ = buf.ReadFrom(r)
 
 	// Expected output includes the entire message
-	expected := message + "\n"
+	expected := message
 	if buf.String() != expected {
 		t.Errorf("Expected output %q, got %q", expected, buf.String())
 	}

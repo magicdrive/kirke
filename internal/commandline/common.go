@@ -50,21 +50,21 @@ func ShowWithLess(message string) {
 	err := cmd.Run()
 
 	if err != nil {
-		fmt.Println(message)
+		fmt.Print(message)
 	}
 }
 
 func GracefulPrintOut(message string, noPagerFlag bool) {
 
 	if noPagerFlag {
-		fmt.Println(message)
+		fmt.Print(message)
 		return
 	}
 
 	height, _, err := GetTerminalSize()
 	if err != nil {
 		//Unable to get terminal size
-		fmt.Println(message)
+		fmt.Print(message)
 		return
 	}
 
@@ -73,6 +73,6 @@ func GracefulPrintOut(message string, noPagerFlag bool) {
 	if lines > height {
 		ShowWithLess(message)
 	} else {
-		fmt.Println(message)
+		fmt.Print(message)
 	}
 }
