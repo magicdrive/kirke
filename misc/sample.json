@@ -1,0 +1,113 @@
+{
+  "id": 12345,
+  "name": "Sample Data",
+  "description": "This is a sample JSON data with a complex structure.",
+  "active": true,
+  "tags": [
+    "example",
+    "json",
+    "data",
+    "sample"
+  ],
+  "metrics": {
+    "views": 1500000000000000000000000000000000000000000000000000,
+    "likes": 340.50e100,
+    "shares": 57,
+    "comments": {
+      "count": 14,
+      "top": [
+        {
+          "user": "User123",
+          "comment": "This is amazing!",
+          "likes": 15,
+          "replies": [
+            {
+              "user": "User456",
+              "comment": "I agree!",
+              "likes": 4
+            },
+            {
+              "user": "User789",
+              "comment": "Absolutely!",
+              "likes": 3
+            }
+          ]
+        },
+        {
+          "user": "User987",
+          "comment": "Great sample JSON.",
+          "likes": 9,
+          "replies": []
+        }
+      ]
+    }
+  },
+  "relatedItems": [
+    {
+      "id": 54321,
+      "name": "Related Item 1",
+      "description": "Related item description here.",
+      "price": 19.99,
+      "inStock": true,
+      "reviews": [
+        {
+          "user": "Reviewer1",
+          "rating": 4.5,
+          "comment": "Good quality."
+        },
+        {
+          "user": "Reviewer2",
+          "rating": 4,
+          "comment": "Worth the price."
+        }
+      ]
+    },
+    {
+      "id": 67890,
+      "name": "Related Item 2",
+      "description": "Another related item.",
+      "price": 29.99,
+      "inStock": false,
+      "reviews": [
+        {
+          "user": "Reviewer3",
+          "rating": 5,
+          "comment": "Exceeded expectations!"
+        }
+      ]
+    }
+  ],
+  "owner": {
+    "userID": "user_1001",
+    "userName": "OwnerUser",
+    "contact": {
+      "email": "owner@example.com",
+      "phone": "+1-555-0100",
+      "address": {
+        "street": "123 Sample St",
+        "city": "Sample City",
+        "state": "CA",
+        "zip": "12345"
+      }
+    }
+  },
+  "created_at": "2023-01-15T14:12:00Z",
+  "updated_at": "2023-10-05T10:30:00Z",
+  "additionalInfo": {
+    "notes": [
+      "This is a complex JSON structure for testing purposes.",
+      "It includes nested arrays and objects."
+    ],
+    "categories": [
+      {
+        "name": "Category1",
+        "subcategories": ["Sub1", "Sub2"]
+      },
+      {
+        "name": "Category2",
+        "subcategories": ["Sub3", "Sub4"]
+      }
+    ]
+  }
+}
+
