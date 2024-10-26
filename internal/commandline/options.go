@@ -40,6 +40,10 @@ func (cr *Option) DesideJSONStr() (string, error) {
 		}
 	}
 
+	if jsonStr == "" {
+		return "", nil
+	}
+
 	if isValidJSON(jsonStr) {
 		return jsonStr, nil
 	} else {

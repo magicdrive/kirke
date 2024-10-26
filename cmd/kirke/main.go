@@ -21,9 +21,11 @@ func main() {
 	}
 
 	jsonStr, err := opt.DesideJSONStr()
-
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error %v", err)
+	} else if jsonStr == "" {
+		opt.FlagSet.Usage()
+		os.Exit(0)
 	}
 
 	result, err := core.Apply(jsonStr, opt.RootObjName, opt.WithPointerFlag)
