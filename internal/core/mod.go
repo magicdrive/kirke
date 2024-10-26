@@ -109,11 +109,7 @@ func GoType(fieldName string, value interface{}, withPointer bool) (string, stri
 	case []interface{}:
 		if len(v) > 0 {
 			elementType, nestedStructs := GoType(fieldName+"Item", v[0], withPointer)
-			if withPointer {
-				return "[]*" + elementType, nestedStructs
-			} else {
-				return "[]" + elementType, nestedStructs
-			}
+			return "[]" + elementType, nestedStructs
 		}
 		return "[]interface{}", ""
 	case map[string]interface{}:
