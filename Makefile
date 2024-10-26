@@ -1,4 +1,4 @@
-# Makefile for golang pJ
+# Makefile for golang pj
 
 # Variables
 BUILD_DIR = $(CURDIR)/build
@@ -10,12 +10,9 @@ all: help
 
 # Build all artifacts
 .PHONY: build
-build: clean $(patsubst cmd/%, $(BUILD_DIR)/%, $(CMD_DIRS))
-
-# Build each application in cmd directories
-$(BUILD_DIR)/%: cmd/%/main.go
+build: clean 
 	@mkdir -p $(BUILD_DIR)
-	go build -o $@ $<
+	go build -o $(BUILD_DIR)/kirke
 
 # Run go test for each directories
 .PHONY: test

@@ -1,4 +1,4 @@
-package main
+package cmd
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 	"github.com/magicdrive/kirke/internal/core"
 )
 
-func main() {
+func Excecute() {
 	optlength, opt, err := commandline.OptParse(os.Args[1:])
 	if err != nil {
 		log.Fatalf("Faital Error: %v\n", err)
