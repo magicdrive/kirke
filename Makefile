@@ -1,7 +1,7 @@
 # Makefile for golang pJ
 
 # Variables
-BUILD_DIR = build
+BUILD_DIR = $(CURDIR)/build
 CMD_DIRS = $(wildcard cmd/*)
 
 # Default target
@@ -20,7 +20,13 @@ $(BUILD_DIR)/%: cmd/%/main.go
 # Run go test for each directories
 .PHONY: test
 test:
-	go test ./...
+	go test $(CURDIR)/...
+
+# Run go test for each directories
+.PHONY: test-verbose
+test-verbose:
+	go clean -testcache
+	go test -v $(CURDIR)/...
 
 # Clean build artifacts
 .PHONY: clean

@@ -58,12 +58,14 @@ func GracefulPrintOut(message string, noPagerFlag bool) {
 
 	if noPagerFlag {
 		fmt.Println(message)
+		return
 	}
 
 	height, _, err := GetTerminalSize()
 	if err != nil {
 		//Unable to get terminal size
-		fmt.Print(message)
+		fmt.Println(message)
+		return
 	}
 
 	lines := CountLines(message)

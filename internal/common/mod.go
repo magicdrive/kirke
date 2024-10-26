@@ -3,6 +3,7 @@ package common
 import (
 	"os"
 	"strings"
+	"unicode"
 )
 
 func GetFileContent(filePath string) (string, error) {
@@ -13,21 +14,14 @@ func GetFileContent(filePath string) (string, error) {
 	return string(content), nil
 }
 
-func WriteToFile(filePath, content string) error {
-	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	_, err = file.WriteString(content)
-	return err
-}
-
 func ToCamelCase(s string) string {
 	parts := strings.Split(s, "_")
-	for i := range parts {
-		parts[i] = strings.Title(parts[i])
+	for i, part := range parts {
+		if len(part) > 0 {
+			runes := []rune(part)
+			runes[0] = unicode.ToUpper(runes[0])
+			parts[i] = string(runes)
+		}
 	}
 	return strings.Join(parts, "")
 }

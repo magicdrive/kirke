@@ -87,17 +87,17 @@ func generateStruct(structName string, data OrderedMap, withPointer bool) string
 
 	for _, key := range data.Keys {
 		fieldName := common.ToCamelCase(key)
-		fieldType, newStructs := goType(fieldName, data.Map[key], withPointer)
+		fieldType, newStructs := GoType(fieldName, data.Map[key], withPointer)
 		sb.WriteString(fmt.Sprintf("\t%s %s `json:\"%s\"`\n", fieldName, fieldType, key))
 		nestedStructs.WriteString(newStructs)
 	}
 
-	sb.WriteString("}\n")
+	sb.WriteString("}\n\n")
 	sb.WriteString(nestedStructs.String())
 	return sb.String()
 }
 
-func goType(fieldName string, value interface{}, withPointer bool) (string, string) {
+func GoType(fieldName string, value interface{}, withPointer bool) (string, string) {
 
 	switch v := value.(type) {
 	case string:
@@ -108,7 +108,7 @@ func goType(fieldName string, value interface{}, withPointer bool) (string, stri
 		return "bool", ""
 	case []interface{}:
 		if len(v) > 0 {
-			elementType, nestedStructs := goType(fieldName+"Item", v[0], withPointer)
+			elementType, nestedStructs := GoType(fieldName+"Item", v[0], withPointer)
 			if withPointer {
 				return "[]*" + elementType, nestedStructs
 			} else {
