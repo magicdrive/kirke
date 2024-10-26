@@ -36,19 +36,16 @@ func TestApply(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		// フォーマット済みの期待結果を生成
 		formattedExpected, err := format.Source([]byte(tt.expected))
 		if err != nil {
 			t.Fatalf("Error formatting expected source: %v", err)
 		}
 
-		// Apply関数の実行
 		result, err := core.Apply(tt.jsonStr, tt.rootObjName, tt.withPointer)
 		if (err != nil) != tt.expectError {
 			t.Fatalf("Expected error: %v, got: %v", tt.expectError, err)
 		}
 
-		// 空白と改行を除去して比較
 		expectedStr := strings.ReplaceAll(string(formattedExpected), "\n", "")
 		expectedStr = strings.ReplaceAll(expectedStr, "\t", "")
 		expectedStr = strings.ReplaceAll(expectedStr, " ", "")
