@@ -1,0 +1,28 @@
+Usage: kirke [OPTIONS] [ARGUMENTS]
+
+Description:
+  Brief description of what the command does. Summarize the command's functionality and purpose.
+
+Options:
+  -h, --help                   Show this help message and exit
+  -f, --input-file <json-file> Specify the output file (default is stdout)
+  -n, --name <root-name>       Process directories recursively
+  -j, --json <json-string>     Force the operation, ignoring warnings
+  -p, --pipe                   Process directories recursively
+  --with-pointer               Suppress non-essential output
+  --no-pager                   Suppress non-essential output
+
+Arguments:
+  <input>               The primary input file or directory
+  [secondary]           Optional secondary file or argument
+
+Examples:
+  command -o output.txt input.txt
+      Run the command on 'input.txt' and save results to 'output.txt'
+
+  command --recursive /path/to/directory
+      Process all files in the specified directory recursively
+
+Notes:
+  Additional information, limitations, or relevant context for using the command effectively.
+
