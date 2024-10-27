@@ -25,7 +25,7 @@ jobs:
         run: go mod download
 
       - name: Run tests
-        run: go test ./...
+        run: make test
 
   # Release
   release:
@@ -46,30 +46,14 @@ jobs:
       - name: Build for release using Makefile
         run: make release
 
+      - name: Install GitHub CLI
+        uses: actions/setup-gh@v2
+
       - name: Create GitHub Release
-        id: create_release
-        uses: actions/create-release@v1
-        with:
-          tag_name: ${{ github.ref_name }}
-          release_name: Release ${{ github.ref_name }}
-          draft: false
-          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload Linux Asset
-        uses: actions/upload-release-asset@v2
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: build/linux-amd64/kirke
-          asset_name: kirke-linux-amd64
-          asset_content_type: application/octet-stream
-
-      - name: Upload macOS Asset
-        uses: actions/upload-release-asset@v2
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: build/darwin-amd64/kirke
-          asset_name: kirke-darwin-amd64
-          asset_content_type: application/octet-stream
+        run: |
+          gh release create ${{ github.ref_name }} ./build/linux-amd64/kirke ./build/darwin-amd64/kirke \
+          --title "Release ${{ github.ref_name }}" \
+          --notes "Automated release for version ${{ github.ref_name }}"
 
