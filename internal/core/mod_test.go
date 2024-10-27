@@ -82,7 +82,7 @@ func TestOrderedMap_UnmarshalJSON(t *testing.T) {
 	}
 }
 
-func TestGoType(t *testing.T) {
+func TestGoType_NoPinter(t *testing.T) {
 	tests := []struct {
 		fieldName    string
 		value        interface{}
@@ -90,10 +90,38 @@ func TestGoType(t *testing.T) {
 		expectedType string
 	}{
 		{"FieldString", "sample", false, "string"},
-		{"FieldNumber", json.Number("123"), false, "int"},
+		{"FieldNumberInt", json.Number("123"), true, "int"},
+		{"FieldNumberFloat", json.Number("1.23"), true, "float64"},
+		{"FieldNumberBigInt", json.Number("123567890123567890123567890"), true, "*big.Int"},
+		{"FieldNumberBigFloat", json.Number("1.23567e100"), true, "*big.Float"},
 		{"FieldBool", true, false, "bool"},
 		{"FieldSlice", []interface{}{"item1"}, false, "[]string"},
 		{"FieldMap", map[string]interface{}{"nested": "value"}, false, "FieldMap"},
+	}
+
+	for _, tt := range tests {
+		gotType, _ := core.GoType(tt.fieldName, tt.value, tt.withPointer)
+		if gotType != tt.expectedType {
+			t.Errorf("For fieldName %s, expected type %s, got %s", tt.fieldName, tt.expectedType, gotType)
+		}
+	}
+}
+
+func TestGoType_WithPointer(t *testing.T) {
+	tests := []struct {
+		fieldName    string
+		value        interface{}
+		withPointer  bool
+		expectedType string
+	}{
+		{"FieldString", "sample", true, "string"},
+		{"FieldNumberInt", json.Number("123"), true, "int"},
+		{"FieldNumberFloat", json.Number("1.23"), true, "float64"},
+		{"FieldNumberBigInt", json.Number("123567890123567890123567890"), true, "*big.Int"},
+		{"FieldNumberBigFloat", json.Number("1.23567e100"), true, "*big.Float"},
+		{"FieldBool", true, true, "bool"},
+		{"FieldSlice", []interface{}{"item1"}, true, "[]string"},
+		{"FieldMap", map[string]interface{}{"nested": "value"}, true, "*FieldMap"},
 	}
 
 	for _, tt := range tests {
