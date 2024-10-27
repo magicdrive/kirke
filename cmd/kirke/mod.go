@@ -9,7 +9,7 @@ import (
 	"github.com/magicdrive/kirke/internal/core"
 )
 
-func Excecute() {
+func Excecute(version string) {
 	optlength, opt, err := commandline.OptParse(os.Args[1:])
 	if err != nil {
 		log.Fatalf("Faital Error: %v\n", err)
@@ -17,6 +17,11 @@ func Excecute() {
 
 	if optlength < 1 || opt.HelpFlag {
 		opt.FlagSet.Usage()
+		os.Exit(0)
+	}
+
+	if opt.VersionFlag {
+		fmt.Printf("kirke version %s\n", version)
 		os.Exit(0)
 	}
 

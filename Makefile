@@ -5,7 +5,7 @@ BUILD_DIR = $(CURDIR)/build
 CMD_DIRS = $(wildcard cmd/*)
 BINARY_NAME = kirke
 VERSION = $(shell git describe --tags --always)
-PLATFORMS := linux/amd64 windows/amd64 darwin/amd64
+PLATFORMS := linux/amd64 darwin/amd64
 
 # Default target
 .PHONY: all
@@ -26,7 +26,7 @@ release: clean $(PLATFORMS)
 $(PLATFORMS):
 	@mkdir -p $(BUILD_DIR)
 	GOOS=$(word 1,$(subst /, ,$@)) GOARCH=$(word 2,$(subst /, ,$@)) \
-		 go build -o $(BUILD_DIR)/$(BINARY_NAME)-$(word 1,$(subst /, ,$@))-$(word 2,$(subst /, ,$@)) \
+		 go build -o $(BUILD_DIR)/$(word 1,$(subst /, ,$@))-$(word 2,$(subst /, ,$@))/$(BINARY_NAME)\
 		 -ldflags "-X main.version=$(VERSION)" .
 
 # Run go test for each directory

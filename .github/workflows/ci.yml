@@ -40,12 +40,11 @@ jobs:
         with:
           go-version: '1.23'
 
-      - name: Build
-        run: |
-          mkdir -p dist
-          GOOS=linux GOARCH=amd64 go build -o dist/myapp-linux-amd64
-          GOOS=windows GOARCH=amd64 go build -o dist/myapp-windows-amd64.exe
-          GOOS=darwin GOARCH=amd64 go build -o dist/myapp-darwin-amd64
+      - name: Install dependencies
+        run: go mod download
+
+      - name: Build for release using Makefile
+        run: make release
 
       - name: Create GitHub Release
         id: create_release
@@ -62,23 +61,15 @@ jobs:
         uses: actions/upload-release-asset@v2
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: dist/myapp-linux-amd64
-          asset_name: myapp-linux-amd64
-          asset_content_type: application/octet-stream
-
-      - name: Upload Windows Asset
-        uses: actions/upload-release-asset@v2
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: dist/myapp-windows-amd64.exe
-          asset_name: myapp-windows-amd64.exe
+          asset_path: build/linux-amd64/kirke
+          asset_name: kirke-linux-amd64
           asset_content_type: application/octet-stream
 
       - name: Upload macOS Asset
         uses: actions/upload-release-asset@v2
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: dist/myapp-darwin-amd64
-          asset_name: myapp-darwin-amd64
+          asset_path: build/darwin-amd64/kirke
+          asset_name: kirke-darwin-amd64
           asset_content_type: application/octet-stream
 

@@ -24,6 +24,9 @@ func compareOptions(t *testing.T, expected, result *commandline.Option) {
 	if expected.HelpFlag != result.HelpFlag {
 		t.Errorf("Expected HelpFlag %v, got %v", expected.HelpFlag, result.HelpFlag)
 	}
+	if expected.VersionFlag != result.VersionFlag {
+		t.Errorf("Expected VersionFlag %v, got %v", expected.VersionFlag, result.VersionFlag)
+	}
 	if expected.PipeFlag != result.PipeFlag {
 		t.Errorf("Expected PipeFlag %v, got %v", expected.PipeFlag, result.PipeFlag)
 	}
@@ -40,6 +43,7 @@ func TestOptParse_NoArgs(t *testing.T) {
 		InputPath:       "",
 		WithPointerFlag: false,
 		HelpFlag:        false,
+		VersionFlag:     false,
 		PipeFlag:        false,
 		NoPagerFlag:     false,
 	}
@@ -60,6 +64,7 @@ func TestOptParse_WithFlags(t *testing.T) {
 		"-f", "input.json",
 		"--with-pointer",
 		"--help",
+		"--version",
 		"--pipe",
 		"--no-pager",
 	}
@@ -69,6 +74,7 @@ func TestOptParse_WithFlags(t *testing.T) {
 		InputPath:       "input.json",
 		WithPointerFlag: true,
 		HelpFlag:        true,
+		VersionFlag:     true,
 		PipeFlag:        true,
 		NoPagerFlag:     true,
 	}

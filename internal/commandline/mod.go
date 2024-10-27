@@ -26,13 +26,15 @@ func OptParse(args []string) (int, *Option, error) {
 	helpFlagOpt := fs.Bool("help", false, "Show this message.")
 	fs.BoolVar(helpFlagOpt, "h", false, "Show this message.")
 
+	versionFlagOpt := fs.Bool("version", false, "Show version.")
+	fs.BoolVar(versionFlagOpt, "v", false, "Show version.")
+
 	pipeFlagOpt := fs.Bool("pipe", false, "Receive a JSON string from a pipe.")
 	fs.BoolVar(helpFlagOpt, "p", false, "Receive a JSON string from a pipe.")
 
 	noPagerFlagOpt := fs.Bool("no-pager", false, "Do not use a pager for output.")
 
 	withPointerOpt := fs.Bool("with-pointer", false, "Make nested struct fields of pointer type.")
-
 
 	err := fs.Parse(args)
 	if err != nil {
@@ -45,6 +47,7 @@ func OptParse(args []string) (int, *Option, error) {
 		InputPath:       *inputPathOpt,
 		WithPointerFlag: *withPointerOpt,
 		HelpFlag:        *helpFlagOpt,
+		VersionFlag:     *versionFlagOpt,
 		PipeFlag:        *pipeFlagOpt,
 		NoPagerFlag:     *noPagerFlagOpt,
 		FlagSet:         fs,

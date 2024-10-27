@@ -14,6 +14,7 @@ type Option struct {
 	InputPath       string
 	WithPointerFlag bool
 	HelpFlag        bool
+	VersionFlag        bool
 	PipeFlag        bool
 	NoPagerFlag     bool
 	FlagSet         *flag.FlagSet
