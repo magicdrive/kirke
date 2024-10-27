@@ -53,7 +53,7 @@ jobs:
 
       - name: Create GitHub Release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_GITHUB_TOKEN }}
         run: |
           gh release create ${{ github.ref_name }} ./build/linux-amd64/kirke ./build/darwin-amd64/kirke \
           --title "Release ${{ github.ref_name }}" \
