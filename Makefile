@@ -16,6 +16,7 @@ all: help
 build: clean
 	@mkdir -p $(BUILD_DIR)
 	go build -o $(BUILD_DIR)/$(BINARY_NAME) -ldflags "-X main.version=$(VERSION)"
+	chmod 755 $(BUILD_DIR)/$(BINARY_NAME)
 
 # Build artifacts for all platforms and release
 .PHONY: release
@@ -28,6 +29,7 @@ $(PLATFORMS):
 	GOOS=$(word 1,$(subst /, ,$@)) GOARCH=$(word 2,$(subst /, ,$@)) \
 		 go build -o $(BUILD_DIR)/$(word 1,$(subst /, ,$@))-$(word 2,$(subst /, ,$@))/$(BINARY_NAME)\
 		 -ldflags "-X main.version=$(VERSION)" .
+	chmod 755 $(BUILD_DIR)/$(word 1,$(subst /, ,$@))-$(word 2,$(subst /, ,$@))/$(BINARY_NAME)
 
 # Run go test for each directory
 .PHONY: test
