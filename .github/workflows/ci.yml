@@ -56,8 +56,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.PERSONAL_GITHUB_TOKEN }}
         run: |
           gh release create ${{ github.ref_name }} \
-          --title "Release ${{ github.ref_name }}" \
-          --notes "Automated release for version ${{ github.ref_name }}"
+          --title "${{ github.ref_name }}" \
+          --notes "Version ${{ github.ref_name }} is now available! This update includes key improvements and bug fixes."
+
 
       - name: Upload Linux Asset
         env:
