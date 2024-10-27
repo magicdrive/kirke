@@ -1,4 +1,4 @@
-# Makefile for golang pj
+# Makefile for kirke
 
 # Variables
 BUILD_DIR = $(CURDIR)/build
@@ -30,19 +30,13 @@ test-verbose:
 clean:
 	@rm -rf $(BUILD_DIR)
 
-# Run a specific application
-.PHONY: run
-run: build
-	@echo "Available apps:"
-	@ls $(BUILD_DIR)
-	@read -p "Enter the app to run: " app; ./$(BUILD_DIR)/$$app
-
 # Show help
 .PHONY: help
 help:
 	@echo "Makefile commands:"
 	@echo "  make build   - Build all artifacts"
 	@echo "  make test    - Run go test"
+	@echo "  make test    - Run go test -v with git clean -testcache"
 	@echo "  make clean   - Remove build artifacts"
 	@echo "  make run     - Run a specific application"
 	@echo "  make help    - Show this message"
