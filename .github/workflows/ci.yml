@@ -63,13 +63,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.PERSONAL_GITHUB_TOKEN }}
         run: |
-          gh release upload ${{ github.ref_name }} ./build/linux-amd64/kirke --clobber \
-          --name kirke-linux-amd64
+          gh release upload ${{ github.ref_name }} ./build/linux-amd64/kirke --clobber
 
       - name: Upload macOS Asset
         env:
           GITHUB_TOKEN: ${{ secrets.PERSONAL_GITHUB_TOKEN }}
         run: |
-          gh release upload ${{ github.ref_name }} ./build/darwin-amd64/kirke --clobber \
-          --name kirke-darwin-amd64
+          gh release upload ${{ github.ref_name }} ./build/darwin-amd64/kirke --clobber
 
