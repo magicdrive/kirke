@@ -1,7 +1,7 @@
 Kirke
 =====
 
-Kirke is a command-line tool for converting JSON strings into Golang struct definitions. It’s designed to be flexible, allowing for JSON input from both files and pipes, and it handles pointer types for nested structures when specified.
+Kirke is a yet another command-line tool for converting JSON strings into Golang struct definitions. It’s designed to be flexible, allowing for JSON input from both files and pipes, and it handles pointer types for nested structures when specified.
 
 Features
 --------
@@ -72,13 +72,13 @@ Convert JSON data from a specified file to a struct with a specified root name:
 
 Read JSON data from a pipe, use pointers for nested fields, and output as a struct:
 
-    cat ./path/to/example.json | kirke --with-pointer
+    echo '{"key": "value"}' | kirke --with-pointer
 
 ### Example 4: JSON input from a pipe force.
 
-Read JSON data from a pipe, use pointers for nested fields, and output as a struct:
+Read JSON data from a pipe, use pointers for nested fields, and output as a struct (-j option is ignored.):
 
-    cat ./path/to/example.json | kirke --pipe --with-pointer -j '{"key": "value"}'
+    echo '{"key": "value"}' | kirke --pipe --with-pointer -j '{"key": "value"}'
 
 
 LICENCE

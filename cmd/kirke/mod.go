@@ -15,23 +15,22 @@ func Excecute(version string) {
 		log.Fatalf("Faital Error: %v\n", err)
 	}
 
+	if opt.VersionFlag {
+		fmt.Printf("kirke version %s\n", version)
+		os.Exit(0)
+	} else if optlength < 1 || opt.HelpFlag {
+		opt.FlagSet.Usage()
+		os.Exit(0)
+	}
+
 	jsonStr, err := opt.DecideJSONStr()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error %v\n", err)
 		os.Exit(1)
 	} else if jsonStr == "" {
+		fmt.Printf("No JSON string is provided.\n\n\n\n")
 		opt.FlagSet.Usage()
-		os.Exit(0)
-	}
-
-	if optlength < 1 && jsonStr == "" || opt.HelpFlag {
-		opt.FlagSet.Usage()
-		os.Exit(0)
-	}
-
-	if opt.VersionFlag {
-		fmt.Printf("kirke version %s\n", version)
-		os.Exit(0)
+		os.Exit(1)
 	}
 
 	result, err := core.Apply(jsonStr, opt.RootObjName, opt.WithPointerFlag)
