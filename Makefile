@@ -5,7 +5,10 @@ BUILD_DIR = $(CURDIR)/build
 CMD_DIRS = $(wildcard cmd/*)
 BINARY_NAME = kirke
 VERSION = $(shell git describe --tags --always)
+LDFLAGS += -X "main.version=$(VERSION)"
+
 PLATFORMS := linux/amd64 darwin/amd64
+GO := GO111MODULE=on CGO_ENABLED=0 go
 
 # Default target
 .PHONY: all
@@ -15,8 +18,8 @@ all: help
 .PHONY: build
 build: clean
 	@mkdir -p $(BUILD_DIR)
-	go build -o $(BUILD_DIR)/$(BINARY_NAME) -ldflags "-X main.version=$(VERSION)"
-	chmod 755 $(BUILD_DIR)/$(BINARY_NAME)
+	@$(GO) build -o $(BUILD_DIR)/$(BINARY_NAME) -ldflags "$(LDFLAGS)"
+	@chmod 755 $(BUILD_DIR)/$(BINARY_NAME)
 
 # Build artifacts for all platforms and release
 .PHONY: release
@@ -27,20 +30,25 @@ release: clean $(PLATFORMS)
 $(PLATFORMS):
 	@mkdir -p $(BUILD_DIR)
 	GOOS=$(word 1,$(subst /, ,$@)) GOARCH=$(word 2,$(subst /, ,$@)) \
-		 go build -o $(BUILD_DIR)/$(word 1,$(subst /, ,$@))-$(word 2,$(subst /, ,$@))/$(BINARY_NAME)\
-		 -ldflags "-X main.version=$(VERSION)" .
+		 $(GO) build -o $(BUILD_DIR)/$(word 1,$(subst /, ,$@))-$(word 2,$(subst /, ,$@))/$(BINARY_NAME)\
+		 -ldflags "$(LDFAGS)" .
 	chmod 755 $(BUILD_DIR)/$(word 1,$(subst /, ,$@))-$(word 2,$(subst /, ,$@))/$(BINARY_NAME)
 
 # Run go test for each directory
 .PHONY: test
 test:
-	go test $(CURDIR)/...
+	@$(GO) test $(CURDIR)/...
 
 # Run go test with verbose output and clear test cache
 .PHONY: test-verbose
 test-verbose:
-	go clean -testcache
-	go test -v $(CURDIR)/...
+	@$(GO) clean -testcache
+	@$(GO) test -v $(CURDIR)/...
+
+.PHONY: install
+install:
+	@echo "Installing kirke..."
+	@$(GO) install -ldflags "$(LDFLAGS)"
 
 # Clean build artifacts
 .PHONY: clean
