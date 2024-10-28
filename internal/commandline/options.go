@@ -8,15 +8,22 @@ import (
 	"github.com/magicdrive/kirke/internal/common"
 )
 
+const (
+	OutputModeInline = iota
+	OutputModeOutline
+)
+
 type Option struct {
 	RootObjName     string
 	Json            string
-	InputPath       string
+	FilePath        string
 	WithPointerFlag bool
 	HelpFlag        bool
 	VersionFlag     bool
 	ForcePipeFlag   bool
 	NoPagerFlag     bool
+	InlineFlag      bool
+	OutlineFlag     bool
 	FlagSet         *flag.FlagSet
 	PipeReader      PipeReader
 }
@@ -57,11 +64,11 @@ func (cr *Option) DecideJSONStr() (string, error) {
 	}
 
 	// --input-file option
-	if cr.InputPath != "" {
-		if fileBuf, err := common.GetFileContent(cr.InputPath); err == nil {
+	if cr.FilePath != "" {
+		if fileBuf, err := common.GetFileContent(cr.FilePath); err == nil {
 			jsonStr = fileBuf
 		} else {
-			return "", fmt.Errorf("Could not read file: %s", cr.InputPath)
+			return "", fmt.Errorf("Could not read file: %s", cr.FilePath)
 		}
 	}
 
@@ -75,7 +82,19 @@ func (cr *Option) DecideJSONStr() (string, error) {
 	}
 
 	return validationF(jsonStr)
+}
 
+func (cr *Option) DecideOutputMode() (int, error) {
+	if cr.InlineFlag == true && cr.OutlineFlag == false {
+		return OutputModeInline, nil
+	} else if cr.InlineFlag == false && cr.OutlineFlag == true {
+		return OutputModeOutline, nil
+	} else if cr.InlineFlag == false && cr.OutlineFlag == false {
+		return OutputModeOutline, nil
+	} else if cr.InlineFlag == true && cr.OutlineFlag == true {
+		return -1, fmt.Errorf("cannot enable --inline and --outline at the same time.")
+	}
+	return OutputModeOutline, nil
 }
 
 func isValidJSON(jsonStr string) bool {

@@ -8,6 +8,7 @@ import (
 //go:embed help.txt
 var helpMessage string
 
+
 func OptParse(args []string) (int, *Option, error) {
 
 	optLength := len(args)
@@ -20,8 +21,8 @@ func OptParse(args []string) (int, *Option, error) {
 	jsonOpt := fs.String("json", "", "Specified json string.")
 	fs.StringVar(jsonOpt, "j", "", "Specified json string.")
 
-	inputPathOpt := fs.String("input-file", "", "Specified json string source file.")
-	fs.StringVar(inputPathOpt, "f", "", "Specified json string source file.")
+	filePathOpt := fs.String("file", "", "Specified json string source file.")
+	fs.StringVar(filePathOpt, "f", "", "Specified json string source file.")
 
 	helpFlagOpt := fs.Bool("help", false, "Show this message.")
 	fs.BoolVar(helpFlagOpt, "h", false, "Show this message.")
@@ -33,6 +34,8 @@ func OptParse(args []string) (int, *Option, error) {
 	fs.BoolVar(forcePpipeFlagOpt, "p", false, "Receive a JSON string from a pipe.")
 
 	noPagerFlagOpt := fs.Bool("no-pager", false, "Do not use a pager for output.")
+	inlineFlagOpt := fs.Bool("inline", false, "Create inline struct definition output.")
+	outlineFlagOpt := fs.Bool("outline", false, "Create outline struct definition output.")
 
 	withPointerOpt := fs.Bool("with-pointer", false, "Make nested struct fields of pointer type.")
 
@@ -44,12 +47,14 @@ func OptParse(args []string) (int, *Option, error) {
 	result := &Option{
 		RootObjName:     *nameOpt,
 		Json:            *jsonOpt,
-		InputPath:       *inputPathOpt,
+		FilePath:       *filePathOpt,
 		WithPointerFlag: *withPointerOpt,
 		HelpFlag:        *helpFlagOpt,
 		VersionFlag:     *versionFlagOpt,
 		ForcePipeFlag:   *forcePpipeFlagOpt,
 		NoPagerFlag:     *noPagerFlagOpt,
+		InlineFlag:      *inlineFlagOpt,
+		OutlineFlag:     *outlineFlagOpt,
 		FlagSet:         fs,
 	}
 	OverRideHelp(fs, result.NoPagerFlag)

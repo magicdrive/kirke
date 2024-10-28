@@ -33,7 +33,13 @@ func Excecute(version string) {
 		os.Exit(1)
 	}
 
-	result, err := core.Apply(jsonStr, opt.RootObjName, opt.WithPointerFlag)
+	outputMode, err := opt.DecideOutputMode()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error %v\n", err)
+		os.Exit(1)
+	}
+
+	result, err := core.Apply(jsonStr, opt.RootObjName, outputMode, opt.WithPointerFlag)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error %v\n", err)
 		os.Exit(1)
