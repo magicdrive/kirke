@@ -2,6 +2,7 @@ package common
 
 import (
 	"os"
+	"regexp"
 	"strings"
 	"unicode"
 )
@@ -25,3 +26,14 @@ func ToCamelCase(s string) string {
 	}
 	return strings.Join(parts, "")
 }
+
+func ToSnakeCase(input string) string {
+	if strings.Contains(input, "_") {
+		return input
+	}
+
+	re := regexp.MustCompile("([a-z0-9])([A-Z])")
+	snake := re.ReplaceAllString(input, "${1}_${2}")
+	return strings.ToLower(snake)
+}
+

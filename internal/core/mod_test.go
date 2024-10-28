@@ -8,6 +8,7 @@ import (
 
 	"strings"
 
+	"github.com/magicdrive/kirke/internal/common"
 	"github.com/magicdrive/kirke/internal/core"
 )
 
@@ -82,7 +83,7 @@ func TestOrderedMap_UnmarshalJSON(t *testing.T) {
 	}
 }
 
-func TestGoType_NoPinter(t *testing.T) {
+func TestGoType_NoPointer(t *testing.T) {
 	tests := []struct {
 		fieldName    string
 		value        interface{}
@@ -90,17 +91,27 @@ func TestGoType_NoPinter(t *testing.T) {
 		expectedType string
 	}{
 		{"FieldString", "sample", false, "string"},
-		{"FieldNumberInt", json.Number("123"), true, "int"},
-		{"FieldNumberFloat", json.Number("1.23"), true, "float64"},
-		{"FieldNumberBigInt", json.Number("123567890123567890123567890"), true, "*big.Int"},
-		{"FieldNumberBigFloat", json.Number("1.23567e100"), true, "*big.Float"},
+		{"FieldNumberInt", json.Number("123"), false, "int"},
+		{"FieldNumberFloat", json.Number("1.23"), false, "float64"},
+		{"FieldNumberBigInt", json.Number("123567890123567890123567890"), false, "*big.Int"},
+		{"FieldNumberBigFloat", json.Number("1.23567e100"), false, "*big.Float"},
 		{"FieldBool", true, false, "bool"},
 		{"FieldSlice", []interface{}{"item1"}, false, "[]string"},
-		{"FieldMap", map[string]interface{}{"nested": "value"}, false, "FieldMap"},
+		{"FieldMap", &core.OrderedMap{Keys: []string{"nested"}, Map: map[string]interface{}{"nested": "value"}}, false, "FieldMap"},
 	}
 
 	for _, tt := range tests {
-		gotType, _ := core.GoType(tt.fieldName, tt.value, tt.withPointer)
+		snakeFieldName := common.ToSnakeCase(tt.fieldName)
+		numberStrings := map[string]string{}
+		boolFields := map[string]bool{}
+
+		if num, ok := tt.value.(json.Number); ok {
+			numberStrings[snakeFieldName] = num.String()
+		} else if boolVal, ok := tt.value.(bool); ok {
+			boolFields[snakeFieldName] = boolVal
+		}
+
+		gotType, _ := core.GoType(tt.fieldName, tt.value, tt.withPointer, numberStrings, boolFields)
 		if gotType != tt.expectedType {
 			t.Errorf("For fieldName %s, expected type %s, got %s", tt.fieldName, tt.expectedType, gotType)
 		}
@@ -121,13 +132,24 @@ func TestGoType_WithPointer(t *testing.T) {
 		{"FieldNumberBigFloat", json.Number("1.23567e100"), true, "*big.Float"},
 		{"FieldBool", true, true, "bool"},
 		{"FieldSlice", []interface{}{"item1"}, true, "[]string"},
-		{"FieldMap", map[string]interface{}{"nested": "value"}, true, "*FieldMap"},
+		{"FieldMap", &core.OrderedMap{Keys: []string{"nested"}, Map: map[string]interface{}{"nested": "value"}}, true, "*FieldMap"},
 	}
 
 	for _, tt := range tests {
-		gotType, _ := core.GoType(tt.fieldName, tt.value, tt.withPointer)
+		snakeFieldName := common.ToSnakeCase(tt.fieldName)
+		numberStrings := map[string]string{}
+		boolFields := map[string]bool{}
+
+		if num, ok := tt.value.(json.Number); ok {
+			numberStrings[snakeFieldName] = num.String()
+		} else if boolVal, ok := tt.value.(bool); ok {
+			boolFields[snakeFieldName] = boolVal
+		}
+
+		gotType, _ := core.GoType(tt.fieldName, tt.value, tt.withPointer, numberStrings, boolFields)
 		if gotType != tt.expectedType {
 			t.Errorf("For fieldName %s, expected type %s, got %s", tt.fieldName, tt.expectedType, gotType)
 		}
 	}
 }
+

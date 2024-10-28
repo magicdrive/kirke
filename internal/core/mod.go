@@ -9,11 +9,6 @@ import (
 	"github.com/magicdrive/kirke/internal/common"
 )
 
-type OrderedMap struct {
-	Keys []string
-	Map  map[string]interface{}
-}
-
 func Apply(jsonStr string, rootObjName string, withPointer bool) (string, error) {
 
 	var data OrderedMap
@@ -33,52 +28,6 @@ func Apply(jsonStr string, rootObjName string, withPointer bool) (string, error)
 	return string(formattedCode), nil
 }
 
-func (o *OrderedMap) UnmarshalJSON(b []byte) error {
-	o.Map = make(map[string]interface{})
-	dec := json.NewDecoder(strings.NewReader(string(b)))
-	dec.UseNumber()
-
-	tok, err := dec.Token()
-	if err != nil {
-		return err
-	}
-
-	if delim, ok := tok.(json.Delim); !ok || delim != '{' {
-		return fmt.Errorf("expected '{', but got %v", tok)
-	}
-
-	for dec.More() {
-		tok, err := dec.Token()
-		if err != nil {
-			return err
-		}
-
-		switch v := tok.(type) {
-		case string:
-			o.Keys = append(o.Keys, v)
-		default:
-			return fmt.Errorf("expected string for key, but got %v", tok)
-		}
-
-		var value interface{}
-		if err := dec.Decode(&value); err != nil {
-			return err
-		}
-		o.Map[o.Keys[len(o.Keys)-1]] = value
-	}
-
-	tok, err = dec.Token()
-	if err != nil {
-		return err
-	}
-
-	if delim, ok := tok.(json.Delim); !ok || delim != '}' {
-		return fmt.Errorf("expected '}', but got %v", tok)
-	}
-
-	return nil
-}
-
 func generateStruct(structName string, data OrderedMap, withPointer bool) string {
 	var sb strings.Builder
 	var nestedStructs strings.Builder
@@ -87,9 +36,9 @@ func generateStruct(structName string, data OrderedMap, withPointer bool) string
 
 	for _, key := range data.Keys {
 		fieldName := common.ToCamelCase(key)
-		fieldType, newStructs := GoType(fieldName, data.Map[key], withPointer)
+		fieldType, nestedDef := GoType(fieldName, data.Map[key], withPointer, data.NumberStrings, data.BoolFields)
 		sb.WriteString(fmt.Sprintf("\t%s %s `json:\"%s\"`\n", fieldName, fieldType, key))
-		nestedStructs.WriteString(newStructs)
+		nestedStructs.WriteString(nestedDef)
 	}
 
 	sb.WriteString("}\n\n")
@@ -97,32 +46,33 @@ func generateStruct(structName string, data OrderedMap, withPointer bool) string
 	return sb.String()
 }
 
-func GoType(fieldName string, value interface{}, withPointer bool) (string, string) {
+func GoType(fieldName string, value interface{}, withPointer bool, numberStrings map[string]string, boolFields map[string]bool) (string, string) {
+
+	if numStr, exists := numberStrings[common.ToSnakeCase(fieldName)]; exists {
+		return parseNumber(json.Number(numStr)), ""
+	}
+
+	if _, exists := boolFields[fieldName]; exists {
+		return "bool", ""
+	}
 
 	switch v := value.(type) {
 	case string:
 		return "string", ""
-	case json.Number:
-		return parseNumber(v), ""
 	case bool:
 		return "bool", ""
 	case []interface{}:
 		if len(v) > 0 {
-			elementType, nestedStructs := GoType(fieldName+"Item", v[0], withPointer)
-			return "[]" + elementType, nestedStructs
+			elemType, nestedDef := GoType(fieldName+"Item", v[0], withPointer, numberStrings, boolFields)
+			return "[]" + elemType, nestedDef
 		}
 		return "[]interface{}", ""
-	case map[string]interface{}:
-		nestedData := OrderedMap{Map: v}
-		for key := range v {
-			nestedData.Keys = append(nestedData.Keys, key)
-		}
-		nestedStruct := generateStruct(fieldName, nestedData, withPointer)
+	case *OrderedMap:
+		structDef := generateStruct(fieldName, *v, withPointer)
 		if withPointer {
-			return "*" + fieldName, nestedStruct
-		} else {
-			return fieldName, nestedStruct
+			return "*" + fieldName, structDef
 		}
+		return fieldName, structDef
 
 	default:
 		return "interface{}", ""
