@@ -97,7 +97,8 @@ func TestGoType_NoPointer(t *testing.T) {
 		{"FieldNumberBigFloat", json.Number("1.23567e100"), false, "*big.Float"},
 		{"FieldBool", true, false, "bool"},
 		{"FieldSlice", []interface{}{"item1"}, false, "[]string"},
-		{"FieldMap", &core.OrderedMap{Keys: []string{"nested"}, Map: map[string]interface{}{"nested": "value"}}, false, "FieldMap"},
+		{"FieldMap", &core.OrderedMap{Keys: []string{"nested"},
+			Map: map[string]interface{}{"nested": "value"}}, false, "FieldMap"},
 	}
 
 	for _, tt := range tests {
@@ -111,7 +112,7 @@ func TestGoType_NoPointer(t *testing.T) {
 			boolFields[snakeFieldName] = boolVal
 		}
 
-		gotType, _ := core.GoType(tt.fieldName, tt.value, tt.withPointer, numberStrings, boolFields)
+		gotType, _ := core.GoType(tt.fieldName, snakeFieldName, tt.value, tt.withPointer, numberStrings, boolFields)
 		if gotType != tt.expectedType {
 			t.Errorf("For fieldName %s, expected type %s, got %s", tt.fieldName, tt.expectedType, gotType)
 		}
@@ -132,7 +133,8 @@ func TestGoType_WithPointer(t *testing.T) {
 		{"FieldNumberBigFloat", json.Number("1.23567e100"), true, "*big.Float"},
 		{"FieldBool", true, true, "bool"},
 		{"FieldSlice", []interface{}{"item1"}, true, "[]string"},
-		{"FieldMap", &core.OrderedMap{Keys: []string{"nested"}, Map: map[string]interface{}{"nested": "value"}}, true, "*FieldMap"},
+		{"FieldMap", &core.OrderedMap{Keys: []string{"nested"},
+			Map: map[string]interface{}{"nested": "value"}}, true, "*FieldMap"},
 	}
 
 	for _, tt := range tests {
@@ -146,10 +148,9 @@ func TestGoType_WithPointer(t *testing.T) {
 			boolFields[snakeFieldName] = boolVal
 		}
 
-		gotType, _ := core.GoType(tt.fieldName, tt.value, tt.withPointer, numberStrings, boolFields)
+		gotType, _ := core.GoType(tt.fieldName, snakeFieldName, tt.value, tt.withPointer, numberStrings, boolFields)
 		if gotType != tt.expectedType {
 			t.Errorf("For fieldName %s, expected type %s, got %s", tt.fieldName, tt.expectedType, gotType)
 		}
 	}
 }
-

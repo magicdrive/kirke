@@ -10,9 +10,7 @@ import (
 func parseNumber(num json.Number) string {
 	if _, err := num.Int64(); err == nil {
 		return "int"
-	}
-
-	if strings.Contains(num.String(), ".") {
+	} else if strings.Contains(num.String(), ".") {
 		bigFloatValue, _, parseErr := big.NewFloat(0).Parse(num.String(), 10)
 		if parseErr != nil {
 			//Error converting to big.Float

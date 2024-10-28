@@ -34,10 +34,10 @@ func generateStruct(structName string, data OrderedMap, withPointer bool) string
 
 	sb.WriteString(fmt.Sprintf("type %s struct {\n", structName))
 
-	for _, key := range data.Keys {
-		fieldName := common.ToCamelCase(key)
-		fieldType, nestedDef := GoType(fieldName, data.Map[key], withPointer, data.NumberStrings, data.BoolFields)
-		sb.WriteString(fmt.Sprintf("\t%s %s `json:\"%s\"`\n", fieldName, fieldType, key))
+	for _, keyName := range data.Keys {
+		fieldName := common.ToCamelCase(keyName)
+		fieldType, nestedDef := GoType(fieldName, keyName, data.Map[keyName], withPointer, data.NumberStrings, data.BoolFields)
+		sb.WriteString(fmt.Sprintf("\t%s %s `json:\"%s\"`\n", fieldName, fieldType, keyName))
 		nestedStructs.WriteString(nestedDef)
 	}
 
@@ -46,13 +46,14 @@ func generateStruct(structName string, data OrderedMap, withPointer bool) string
 	return sb.String()
 }
 
-func GoType(fieldName string, value interface{}, withPointer bool, numberStrings map[string]string, boolFields map[string]bool) (string, string) {
+func GoType(fieldName string, keyName string, value interface{}, withPointer bool,
+	numberStrings map[string]string, boolFields map[string]bool) (string, string) {
 
-	if numStr, exists := numberStrings[common.ToSnakeCase(fieldName)]; exists {
+	if numStr, exists := numberStrings[keyName]; exists {
 		return parseNumber(json.Number(numStr)), ""
 	}
 
-	if _, exists := boolFields[fieldName]; exists {
+	if _, exists := boolFields[keyName]; exists {
 		return "bool", ""
 	}
 
@@ -63,7 +64,7 @@ func GoType(fieldName string, value interface{}, withPointer bool, numberStrings
 		return "bool", ""
 	case []interface{}:
 		if len(v) > 0 {
-			elemType, nestedDef := GoType(fieldName+"Item", v[0], withPointer, numberStrings, boolFields)
+			elemType, nestedDef := GoType(fieldName+"Item", "", v[0], withPointer, numberStrings, boolFields)
 			return "[]" + elemType, nestedDef
 		}
 		return "[]interface{}", ""
