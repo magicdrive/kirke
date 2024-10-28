@@ -27,8 +27,8 @@ func compareOptions(t *testing.T, expected, result *commandline.Option) {
 	if expected.VersionFlag != result.VersionFlag {
 		t.Errorf("Expected VersionFlag %v, got %v", expected.VersionFlag, result.VersionFlag)
 	}
-	if expected.PipeFlag != result.PipeFlag {
-		t.Errorf("Expected PipeFlag %v, got %v", expected.PipeFlag, result.PipeFlag)
+	if expected.ForcePipeFlag != result.ForcePipeFlag {
+		t.Errorf("Expected PipeFlag %v, got %v", expected.ForcePipeFlag, result.ForcePipeFlag)
 	}
 	if expected.NoPagerFlag != result.NoPagerFlag {
 		t.Errorf("Expected NoPagerFlag %v, got %v", expected.NoPagerFlag, result.NoPagerFlag)
@@ -44,7 +44,7 @@ func TestOptParse_NoArgs(t *testing.T) {
 		WithPointerFlag: false,
 		HelpFlag:        false,
 		VersionFlag:     false,
-		PipeFlag:        false,
+		ForcePipeFlag:   false,
 		NoPagerFlag:     false,
 	}
 
@@ -75,7 +75,7 @@ func TestOptParse_WithFlags(t *testing.T) {
 		WithPointerFlag: true,
 		HelpFlag:        true,
 		VersionFlag:     true,
-		PipeFlag:        true,
+		ForcePipeFlag:   true,
 		NoPagerFlag:     true,
 	}
 

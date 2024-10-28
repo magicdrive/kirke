@@ -15,7 +15,16 @@ func Excecute(version string) {
 		log.Fatalf("Faital Error: %v\n", err)
 	}
 
-	if optlength < 1 || opt.HelpFlag {
+	jsonStr, err := opt.DecideJSONStr()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error %v\n", err)
+		os.Exit(1)
+	} else if jsonStr == "" {
+		opt.FlagSet.Usage()
+		os.Exit(0)
+	}
+
+	if optlength < 1 && jsonStr == "" || opt.HelpFlag {
 		opt.FlagSet.Usage()
 		os.Exit(0)
 	}
@@ -25,17 +34,10 @@ func Excecute(version string) {
 		os.Exit(0)
 	}
 
-	jsonStr, err := opt.DesideJSONStr()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error %v\n", err)
-	} else if jsonStr == "" {
-		opt.FlagSet.Usage()
-		os.Exit(0)
-	}
-
 	result, err := core.Apply(jsonStr, opt.RootObjName, opt.WithPointerFlag)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error %v\n", err)
+		os.Exit(1)
 	}
 
 	commandline.GracefulPrintOut(result, opt.NoPagerFlag)

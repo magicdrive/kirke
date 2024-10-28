@@ -7,7 +7,21 @@ import (
 	"strings"
 )
 
-func GetPipeBuffer() (string, bool) {
+type PipeReader interface {
+	GetPipeBuffer() (string, bool)
+}
+
+type DefaultPipeReader struct {
+	PipeReader
+}
+
+func (DefaultPipeReader) GetPipeBuffer() (string, bool) {
+	return getPipeBuffer()
+}
+
+var defaultPipeReader = DefaultPipeReader{}
+
+func getPipeBuffer() (string, bool) {
 	stat, err := os.Stdin.Stat()
 	if err != nil {
 		return "", false

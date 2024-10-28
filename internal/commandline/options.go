@@ -14,25 +14,49 @@ type Option struct {
 	InputPath       string
 	WithPointerFlag bool
 	HelpFlag        bool
-	VersionFlag        bool
-	PipeFlag        bool
+	VersionFlag     bool
+	ForcePipeFlag   bool
 	NoPagerFlag     bool
 	FlagSet         *flag.FlagSet
+	PipeReader      PipeReader
 }
 
-func (cr *Option) DesideJSONStr() (string, error) {
+func (cr *Option) DecideJSONStr() (string, error) {
 
-	var jsonStr string
-	jsonStr = cr.Json
+	validationF := func(jsonStr string) (string, error) {
+		if isValidJSON(jsonStr) {
+			return jsonStr, nil
+		} else {
+			return "", fmt.Errorf("Your JSON string is corrupted")
+		}
+	}
 
-	if cr.PipeFlag {
-		if pipeBuf, ok := GetPipeBuffer(); ok {
-			jsonStr = pipeBuf
+	pipeF := func() (string, error) {
+		if cr.PipeReader == nil {
+			cr.PipeReader = defaultPipeReader
+		}
+
+		if pipeBuf, ok := cr.PipeReader.GetPipeBuffer(); ok {
+			return pipeBuf, nil
 		} else {
 			return "", fmt.Errorf("Nothing is coming through unix pipe.")
 		}
 	}
 
+	var jsonStr string
+
+	jsonStr, err := pipeF()
+
+	// --pipe option
+	if cr.ForcePipeFlag {
+		if err != nil {
+			return "", err
+		} else {
+			return validationF(jsonStr)
+		}
+	}
+
+	// --input-file option
 	if cr.InputPath != "" {
 		if fileBuf, err := common.GetFileContent(cr.InputPath); err == nil {
 			jsonStr = fileBuf
@@ -41,15 +65,16 @@ func (cr *Option) DesideJSONStr() (string, error) {
 		}
 	}
 
+	// --json option
+	if cr.Json != "" {
+		jsonStr = cr.Json
+	}
+
 	if jsonStr == "" {
 		return "", nil
 	}
 
-	if isValidJSON(jsonStr) {
-		return jsonStr, nil
-	} else {
-		return "", fmt.Errorf("Your JSON string is corrupted")
-	}
+	return validationF(jsonStr)
 
 }
 

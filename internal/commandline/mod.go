@@ -29,8 +29,8 @@ func OptParse(args []string) (int, *Option, error) {
 	versionFlagOpt := fs.Bool("version", false, "Show version.")
 	fs.BoolVar(versionFlagOpt, "v", false, "Show version.")
 
-	pipeFlagOpt := fs.Bool("pipe", false, "Receive a JSON string from a pipe.")
-	fs.BoolVar(helpFlagOpt, "p", false, "Receive a JSON string from a pipe.")
+	forcePpipeFlagOpt := fs.Bool("pipe", false, "Receive a JSON string from a pipe.")
+	fs.BoolVar(forcePpipeFlagOpt, "p", false, "Receive a JSON string from a pipe.")
 
 	noPagerFlagOpt := fs.Bool("no-pager", false, "Do not use a pager for output.")
 
@@ -48,7 +48,7 @@ func OptParse(args []string) (int, *Option, error) {
 		WithPointerFlag: *withPointerOpt,
 		HelpFlag:        *helpFlagOpt,
 		VersionFlag:     *versionFlagOpt,
-		PipeFlag:        *pipeFlagOpt,
+		ForcePipeFlag:   *forcePpipeFlagOpt,
 		NoPagerFlag:     *noPagerFlagOpt,
 		FlagSet:         fs,
 	}
