@@ -216,7 +216,13 @@ func TestGoTypeForInline(t *testing.T) {
 		{
 			fieldName: "FieldArray",
 			value: []interface{}{
-				map[string]interface{}{"name": "Item1", "id": json.Number("1")},
+				&core.OrderedMap{
+					Keys: []string{"name", "id"},
+					Map: map[string]interface{}{
+						"name": "Item1",
+						"id":   json.Number("1"),
+					},
+				},
 			},
 			expectedType: "[]struct {\n\tName string `json:\"name\"`\n\tId json.Number `json:\"id\"`\n\t}",
 			expectedDef:  "",
