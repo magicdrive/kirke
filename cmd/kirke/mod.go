@@ -18,7 +18,8 @@ func Excecute(version string) {
 	if opt.VersionFlag {
 		fmt.Printf("kirke version %s\n", version)
 		os.Exit(0)
-	} else if optlength < 1 || opt.HelpFlag {
+	}
+	if opt.HelpFlag {
 		opt.FlagSet.Usage()
 		os.Exit(0)
 	}
@@ -28,9 +29,12 @@ func Excecute(version string) {
 		fmt.Fprintf(os.Stderr, "Error %v\n", err)
 		os.Exit(1)
 	} else if jsonStr == "" {
-		fmt.Printf("No JSON string is provided.\n\n\n\n")
+		if optlength > 0 {
+			fmt.Println("No JSON string is provided.")
+			os.Exit(1)
+		}
 		opt.FlagSet.Usage()
-		os.Exit(1)
+		os.Exit(0)
 	}
 
 	outputMode, err := opt.DecideOutputMode()
