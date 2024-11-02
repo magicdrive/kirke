@@ -27,6 +27,11 @@ Alternatively, use `go install`:
 
     go install github.com/magicdrive/kirke@latest
 
+Quick Start
+-----
+
+    cat './path/to/your.json' | kirke
+
 Usage
 -----
 
