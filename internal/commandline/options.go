@@ -17,6 +17,7 @@ type Option struct {
 	RootObjName     string
 	Json            string
 	FilePath        string
+	NullAs          string
 	WithPointerFlag bool
 	HelpFlag        bool
 	VersionFlag     bool

@@ -10,7 +10,7 @@ import (
 	"github.com/magicdrive/kirke/internal/common"
 )
 
-func Apply(jsonStr string, rootObjName string, OutPutMode int, withPointer bool) (string, error) {
+func Apply(jsonStr string, rootObjName string, OutPutMode int, withPointer bool, nullTypeName string) (string, error) {
 
 	var data OrderedMap
 	decoder := json.NewDecoder(strings.NewReader(jsonStr))
@@ -23,9 +23,9 @@ func Apply(jsonStr string, rootObjName string, OutPutMode int, withPointer bool)
 
 	structDef := func() string {
 		if OutPutMode == commandline.OutputModeInline {
-			return generateInlineStruct(structName, data)
+			return generateInlineStruct(structName, data, nullTypeName)
 		} else {
-			return generateOutlineStruct(structName, data, withPointer)
+			return generateOutlineStruct(structName, data, withPointer, nullTypeName)
 		}
 	}()
 

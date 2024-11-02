@@ -8,7 +8,7 @@ import (
 	"github.com/magicdrive/kirke/internal/common"
 )
 
-func generateOutlineStruct(structName string, data OrderedMap, withPointer bool) string {
+func generateOutlineStruct(structName string, data OrderedMap, withPointer bool, nullTypeName string) string {
 	var sb strings.Builder
 	var nestedStructs strings.Builder
 
@@ -17,7 +17,7 @@ func generateOutlineStruct(structName string, data OrderedMap, withPointer bool)
 	for _, keyName := range data.Keys {
 		fieldName := common.ToCamelCase(keyName)
 		fieldType, nestedDef := GoTypeForOutline(fieldName, keyName, data.Map[keyName],
-			withPointer, data.NumberStrings, data.BoolFields)
+			withPointer, data.NumberStrings, data.BoolFields, data.NullFields, nullTypeName)
 		sb.WriteString(fmt.Sprintf("\t%s %s `json:\"%s\"`\n", fieldName, fieldType, keyName))
 		nestedStructs.WriteString(nestedDef)
 	}
@@ -28,14 +28,17 @@ func generateOutlineStruct(structName string, data OrderedMap, withPointer bool)
 }
 
 func GoTypeForOutline(fieldName string, keyName string, value interface{}, withPointer bool,
-	numberStrings map[string]string, boolFields map[string]bool) (string, string) {
-
+	numberStrings map[string]string, boolFields map[string]bool, nullFields map[string]string, nullTypeName string) (string, string) {
 	if numStr, exists := numberStrings[keyName]; exists {
 		return parseNumber(json.Number(numStr)), ""
 	}
 
 	if _, exists := boolFields[keyName]; exists {
 		return "bool", ""
+	}
+
+	if _, exists := nullFields[keyName]; exists {
+		return nullTypeName, ""
 	}
 
 	switch v := value.(type) {
@@ -45,12 +48,13 @@ func GoTypeForOutline(fieldName string, keyName string, value interface{}, withP
 		return "bool", ""
 	case []interface{}:
 		if len(v) > 0 {
-			elemType, nestedDef := GoTypeForOutline(fieldName+"Item", "", v[0], withPointer, numberStrings, boolFields)
+			elemType, nestedDef := GoTypeForOutline(fieldName+"Item", "", v[0],
+				withPointer, numberStrings, boolFields, nullFields, nullTypeName)
 			return "[]" + elemType, nestedDef
 		}
 		return "[]interface{}", ""
 	case *OrderedMap:
-		structDef := generateOutlineStruct(fieldName, *v, withPointer)
+		structDef := generateOutlineStruct(fieldName, *v, withPointer, nullTypeName)
 		if withPointer {
 			return "*" + fieldName, structDef
 		}

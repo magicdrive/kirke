@@ -12,6 +12,7 @@ type OrderedMap struct {
 	Map           map[string]interface{}
 	NumberStrings map[string]string
 	BoolFields    map[string]bool
+	NullFields    map[string]string
 }
 
 func (o *OrderedMap) UnmarshalJSON(b []byte) error {
@@ -19,6 +20,9 @@ func (o *OrderedMap) UnmarshalJSON(b []byte) error {
 	o.Keys = nil
 	o.NumberStrings = make(map[string]string)
 	o.BoolFields = make(map[string]bool)
+	o.NullFields = make(map[string]string)
+
+	nullValue := "nil"
 
 	dec := json.NewDecoder(bytes.NewReader(b))
 	dec.UseNumber()
@@ -72,6 +76,9 @@ func (o *OrderedMap) UnmarshalJSON(b []byte) error {
 			boolValue := rawStr == "true"
 			o.BoolFields[key] = boolValue
 			o.Map[key] = boolValue
+		} else if rawStr == "null" {
+			o.NullFields[key] = nullValue
+			o.Map[key] = nullValue
 		} else {
 			o.NumberStrings[key] = rawStr
 			o.Map[key] = json.Number(rawStr)
@@ -157,4 +164,3 @@ func isJSONArray(b json.RawMessage) bool {
 	b = bytes.TrimSpace(b)
 	return len(b) > 0 && b[0] == '[' && b[len(b)-1] == ']'
 }
-

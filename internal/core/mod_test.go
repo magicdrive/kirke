@@ -23,19 +23,19 @@ func TestApply(t *testing.T) {
 		expectError     bool
 	}{
 		{
-			jsonStr:         `{"name": "Alice", "age": 30, "is_member": true}`,
+			jsonStr:         `{"name": "Alice", "age": 30, "is_member": true, "address": null}`,
 			rootObjName:     "User",
 			withPointer:     false,
-			expectedOutline: "type User struct {\n\tName string `json:\"name\"`\n\tAge int `json:\"age\"`\n\tIsMember bool `json:\"is_member\"`\n}\n",
-			expectedInline:  "type User struct {\n\tName string `json:\"name\"`\n\tAge int `json:\"age\"`\n\tIsMember bool `json:\"is_member\"`\n}\n",
+			expectedOutline: "type User struct {\n\tName string `json:\"name\"`\n\tAge int `json:\"age\"`\n\tIsMember bool `json:\"is_member\"`\n\tAddress any `json:\"address\"`\n}\n",
+			expectedInline:  "type User struct {\n\tName string `json:\"name\"`\n\tAge int `json:\"age\"`\n\tIsMember bool `json:\"is_member\"`\n\tAddress any `json:\"address\"`\n}\n",
 			expectError:     false,
 		},
 		{
-			jsonStr:         `{"person": {"name": "Alice"}, "is_active": true}`,
+			jsonStr:         `{"person": {"name": "Alice", "address": null}, "is_active": true}`,
 			rootObjName:     "Response",
 			withPointer:     true,
-			expectedOutline: "type Response struct {\n\tPerson *Person `json:\"person\"`\n\tIsActive bool `json:\"is_active\"`\n}\n\ntype Person struct {\n\tName string `json:\"name\"`\n}\n",
-			expectedInline:  "type Response struct {\n\tPerson struct {\n\t\tName string `json:\"name\"`\n\t} `json:\"person\"`\n\tIsActive bool `json:\"is_active\"`\n}\n",
+			expectedOutline: "type Response struct {\n\tPerson *Person `json:\"person\"`\n\tIsActive bool `json:\"is_active\"`\n}\n\ntype Person struct {\n\tName string `json:\"name\"`\n\tAddress any `json:\"address\"`\n}\n",
+			expectedInline:  "type Response struct {\n\tPerson struct {\n\t\tName string `json:\"name\"`\n\t\tAddress any `json:\"address\"`\n\t} `json:\"person\"`\n\tIsActive bool `json:\"is_active\"`\n}\n",
 			expectError:     false,
 		},
 	}
@@ -43,6 +43,7 @@ func TestApply(t *testing.T) {
 	for _, tt := range tests {
 		// Test for both OutputModeOutline and OutputModeInline
 		modeStrMap := map[int]string{commandline.OutputModeOutline: "Outline", commandline.OutputModeInline: "Inline"}
+		nullTypeName := "any"
 		for _, mode := range []int{commandline.OutputModeOutline, commandline.OutputModeInline} {
 			t.Run(tt.rootObjName+"_"+modeStrMap[mode], func(t *testing.T) {
 				var expected string
@@ -57,7 +58,7 @@ func TestApply(t *testing.T) {
 					t.Fatalf("Error formatting expected source: %v", err)
 				}
 
-				result, err := core.Apply(tt.jsonStr, tt.rootObjName, mode, tt.withPointer)
+				result, err := core.Apply(tt.jsonStr, tt.rootObjName, mode, tt.withPointer, nullTypeName)
 				if (err != nil) != tt.expectError {
 					t.Fatalf("Expected error: %v, got: %v", tt.expectError, err)
 				}
@@ -113,6 +114,7 @@ func TestGoTypeForOutline_NoPointer(t *testing.T) {
 		{"FieldNumberBigInt", json.Number("123567890123567890123567890"), false, "*big.Int"},
 		{"FieldNumberBigFloat", json.Number("1.23567e100"), false, "*big.Float"},
 		{"FieldBool", true, false, "bool"},
+		{"FieldNull", nil, false, "any"},
 		{"FieldSlice", []interface{}{"item1"}, false, "[]string"},
 		{"FieldMap", &core.OrderedMap{Keys: []string{"nested"},
 			Map: map[string]interface{}{"nested": "value"}}, false, "FieldMap"},
@@ -122,14 +124,18 @@ func TestGoTypeForOutline_NoPointer(t *testing.T) {
 		snakeFieldName := common.ToSnakeCase(tt.fieldName)
 		numberStrings := map[string]string{}
 		boolFields := map[string]bool{}
+		nullFields := map[string]string{}
 
 		if num, ok := tt.value.(json.Number); ok {
 			numberStrings[snakeFieldName] = num.String()
 		} else if boolVal, ok := tt.value.(bool); ok {
 			boolFields[snakeFieldName] = boolVal
+		} else if tt.value == nil {
+			nullFields[snakeFieldName] = ""
 		}
 
-		gotType, _ := core.GoTypeForOutline(tt.fieldName, snakeFieldName, tt.value, tt.withPointer, numberStrings, boolFields)
+		gotType, _ := core.GoTypeForOutline(tt.fieldName, snakeFieldName, tt.value,
+			tt.withPointer, numberStrings, boolFields, nullFields, "any")
 		if gotType != tt.expectedType {
 			t.Errorf("For fieldName %s, expected type %s, got %s", tt.fieldName, tt.expectedType, gotType)
 		}
@@ -149,6 +155,7 @@ func TestGoTypeForOutline_WithPointer(t *testing.T) {
 		{"FieldNumberBigInt", json.Number("123567890123567890123567890"), true, "*big.Int"},
 		{"FieldNumberBigFloat", json.Number("1.23567e100"), true, "*big.Float"},
 		{"FieldBool", true, true, "bool"},
+		{"FieldNull", nil, false, "any"},
 		{"FieldSlice", []interface{}{"item1"}, true, "[]string"},
 		{"FieldMap", &core.OrderedMap{Keys: []string{"nested"},
 			Map: map[string]interface{}{"nested": "value"}}, true, "*FieldMap"},
@@ -158,14 +165,18 @@ func TestGoTypeForOutline_WithPointer(t *testing.T) {
 		snakeFieldName := common.ToSnakeCase(tt.fieldName)
 		numberStrings := map[string]string{}
 		boolFields := map[string]bool{}
+		nullFields := map[string]string{}
 
 		if num, ok := tt.value.(json.Number); ok {
 			numberStrings[snakeFieldName] = num.String()
 		} else if boolVal, ok := tt.value.(bool); ok {
 			boolFields[snakeFieldName] = boolVal
+		} else if tt.value == nil {
+			nullFields[snakeFieldName] = ""
 		}
 
-		gotType, _ := core.GoTypeForOutline(tt.fieldName, snakeFieldName, tt.value, tt.withPointer, numberStrings, boolFields)
+		gotType, _ := core.GoTypeForOutline(tt.fieldName, snakeFieldName, tt.value,
+			tt.withPointer, numberStrings, boolFields, nullFields, "any")
 		if gotType != tt.expectedType {
 			t.Errorf("For fieldName %s, expected type %s, got %s", tt.fieldName, tt.expectedType, gotType)
 		}
@@ -178,6 +189,7 @@ func TestGoTypeForInline(t *testing.T) {
 		value         interface{}
 		numberStrings map[string]string
 		boolFields    map[string]bool
+		nullFields    map[string]string
 		expectedType  string
 		expectedDef   string
 	}{
@@ -191,8 +203,15 @@ func TestGoTypeForInline(t *testing.T) {
 		{
 			fieldName:    "FieldBool",
 			value:        true,
-			boolFields:   map[string]bool{"FieldBool": true},
+			boolFields:   map[string]bool{"field_bool": true},
 			expectedType: "bool",
+			expectedDef:  "",
+		},
+		{
+			fieldName:    "FieldNull",
+			value:        nil,
+			nullFields:   map[string]string{"field_null": ""},
+			expectedType: "any",
 			expectedDef:  "",
 		},
 		{
@@ -239,9 +258,12 @@ func TestGoTypeForInline(t *testing.T) {
 		t.Run(tt.fieldName, func(t *testing.T) {
 			fieldType, nestedFields := core.GoTypeForInline(
 				tt.fieldName,
+				common.ToSnakeCase(tt.fieldName),
 				tt.value,
 				tt.numberStrings,
 				tt.boolFields,
+				tt.nullFields,
+				"any",
 			)
 
 			if fieldType != tt.expectedType {

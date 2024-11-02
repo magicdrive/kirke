@@ -9,13 +9,14 @@ import (
 	"github.com/magicdrive/kirke/internal/common"
 )
 
-func generateInlineStruct(structName string, data OrderedMap) string {
+func generateInlineStruct(structName string, data OrderedMap, nullTypeName string) string {
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("type %s struct {\n", structName))
 
 	for _, keyName := range data.Keys {
 		fieldName := common.ToCamelCase(keyName)
-		fieldType, nestedFields := GoTypeForInline(fieldName, data.Map[keyName], data.NumberStrings, data.BoolFields)
+		fieldType, nestedFields := GoTypeForInline(fieldName, keyName, data.Map[keyName], data.NumberStrings,
+			data.BoolFields, data.NullFields, nullTypeName)
 
 		if nestedFields != "" {
 			sb.WriteString(fmt.Sprintf("\t%s struct {\n%s\t} `json:\"%s\"`\n", fieldName, nestedFields, keyName))
@@ -28,27 +29,34 @@ func generateInlineStruct(structName string, data OrderedMap) string {
 	return sb.String()
 }
 
-func GoTypeForInline(fieldName string, value interface{}, numberStrings map[string]string, boolFields map[string]bool) (string, string) {
-	if numStr, exists := numberStrings[common.ToSnakeCase(fieldName)]; exists {
+func GoTypeForInline(fieldName string, keyName string, value interface{}, numberStrings map[string]string,
+	boolFields map[string]bool, nullFields map[string]string, nullTypeName string) (string, string) {
+
+	if numStr, exists := numberStrings[keyName]; exists {
 		return parseNumber(json.Number(numStr)), ""
 	}
 
-	if _, exists := boolFields[fieldName]; exists {
+	if _, exists := boolFields[keyName]; exists {
 		return "bool", ""
+	}
+
+	if _, exists := nullFields[keyName]; exists {
+		return nullTypeName, ""
 	}
 
 	switch v := value.(type) {
 	case *OrderedMap:
-		return "", generateInlineFields(*v)
+		return "", generateInlineFields(*v, nullTypeName)
 	case map[string]interface{}:
 		nestedMap := OrderedMap{Map: v}
 		for k := range v {
 			nestedMap.Keys = append(nestedMap.Keys, k)
 		}
-		return "", generateInlineFields(nestedMap)
+		return "", generateInlineFields(nestedMap, nullTypeName)
 	case []interface{}:
 		if len(v) > 0 {
-			elemType, nestedFields := GoTypeForInline(fieldName+"Item", v[0], numberStrings, boolFields)
+			elemType, nestedFields := GoTypeForInline(fieldName+"Item", keyName,
+				v[0], numberStrings, boolFields, nullFields, nullTypeName)
 			if nestedFields != "" {
 				return "[]struct {\n" + nestedFields + "\t}", ""
 			}
@@ -60,17 +68,18 @@ func GoTypeForInline(fieldName string, value interface{}, numberStrings map[stri
 	}
 }
 
-func generateInlineFields(data OrderedMap) string {
+func generateInlineFields(data OrderedMap, nullValue string) string {
 	var fields strings.Builder
 
-	for _, key := range data.Keys {
-		fieldName := common.ToCamelCase(key)
-		fieldType, nestedFields := GoTypeForInline(fieldName, data.Map[key], data.NumberStrings, data.BoolFields)
+	for _, keyName := range data.Keys {
+		fieldName := common.ToCamelCase(keyName)
+		fieldType, nestedFields := GoTypeForInline(fieldName, keyName, data.Map[keyName], data.NumberStrings,
+			data.BoolFields, data.NullFields, nullValue)
 
 		if nestedFields != "" {
-			fields.WriteString(fmt.Sprintf("\t%s struct {\n%s\t} `json:\"%s\"`\n", fieldName, nestedFields, key))
+			fields.WriteString(fmt.Sprintf("\t%s struct {\n%s\t} `json:\"%s\"`\n", fieldName, nestedFields, keyName))
 		} else {
-			fields.WriteString(fmt.Sprintf("\t%s %s `json:\"%s\"`\n", fieldName, fieldType, key))
+			fields.WriteString(fmt.Sprintf("\t%s %s `json:\"%s\"`\n", fieldName, fieldType, keyName))
 		}
 	}
 

@@ -8,7 +8,6 @@ import (
 //go:embed help.txt
 var helpMessage string
 
-
 func OptParse(args []string) (int, *Option, error) {
 
 	optLength := len(args)
@@ -23,6 +22,9 @@ func OptParse(args []string) (int, *Option, error) {
 
 	filePathOpt := fs.String("file", "", "Specified json string source file.")
 	fs.StringVar(filePathOpt, "f", "", "Specified json string source file.")
+
+	nullAsOpt := fs.String("null-as", "interface{}", "Specified type name used to replace nulls from json.")
+	fs.StringVar(nullAsOpt, "a", "interface{}", "Specified type name used to replace nulls from json.")
 
 	helpFlagOpt := fs.Bool("help", false, "Show this message.")
 	fs.BoolVar(helpFlagOpt, "h", false, "Show this message.")
@@ -47,7 +49,8 @@ func OptParse(args []string) (int, *Option, error) {
 	result := &Option{
 		RootObjName:     *nameOpt,
 		Json:            *jsonOpt,
-		FilePath:       *filePathOpt,
+		FilePath:        *filePathOpt,
+		NullAs:          *nullAsOpt,
 		WithPointerFlag: *withPointerOpt,
 		HelpFlag:        *helpFlagOpt,
 		VersionFlag:     *versionFlagOpt,
