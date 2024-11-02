@@ -14,19 +14,20 @@ const (
 )
 
 type Option struct {
-	RootObjName     string
-	Json            string
-	FilePath        string
-	NullAs          string
-	WithPointerFlag bool
-	HelpFlag        bool
-	VersionFlag     bool
-	ForcePipeFlag   bool
-	NoPagerFlag     bool
-	InlineFlag      bool
-	OutlineFlag     bool
-	FlagSet         *flag.FlagSet
-	PipeReader      PipeReader
+	RootObjName       string
+	Json              string
+	FilePath          string
+	NullAs            string
+	WithPointerFlag   bool
+	HelpFlag          bool
+	VersionFlag       bool
+	ForcePipeFlag     bool
+	NoPagerFlag       bool
+	InlineFlag        bool
+	OutlineFlag       bool
+	DefaultOutputMode string
+	FlagSet           *flag.FlagSet
+	PipeReader        PipeReader
 }
 
 func (cr *Option) DecideJSONStr() (string, error) {
@@ -91,11 +92,17 @@ func (cr *Option) DecideOutputMode() (int, error) {
 	} else if cr.InlineFlag == false && cr.OutlineFlag == true {
 		return OutputModeOutline, nil
 	} else if cr.InlineFlag == false && cr.OutlineFlag == false {
+		if cr.DefaultOutputMode == "inline" {
+			return OutputModeInline, nil
+		} else if cr.DefaultOutputMode == "outline" {
+			return OutputModeOutline, nil
+		}
 		return OutputModeOutline, nil
 	} else if cr.InlineFlag == true && cr.OutlineFlag == true {
 		return -1, fmt.Errorf("cannot enable --inline and --outline at the same time.")
+	} else {
+		return OutputModeOutline, nil
 	}
-	return OutputModeOutline, nil
 }
 
 func isValidJSON(jsonStr string) bool {

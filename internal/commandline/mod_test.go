@@ -1,6 +1,7 @@
 package commandline_test
 
 import (
+	"os"
 	"testing"
 
 	"github.com/magicdrive/kirke/internal/commandline"
@@ -51,7 +52,7 @@ func TestOptParse_NoArgs(t *testing.T) {
 		ForcePipeFlag:   false,
 		NoPagerFlag:     false,
 		InlineFlag:      false,
-		OutlineFlag:     false,
+		OutlineFlag:     true,
 	}
 
 	_, result, err := commandline.OptParse(args)
@@ -87,6 +88,46 @@ func TestOptParse_WithFlags(t *testing.T) {
 		NoPagerFlag:     true,
 		InlineFlag:      true,
 		OutlineFlag:     true,
+	}
+
+	_, result, err := commandline.OptParse(args)
+	if err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+
+	// Compare only the relevant fields
+	compareOptions(t, expected, result)
+}
+
+func TestOptParse_WithEnviroments(t *testing.T) {
+
+	os.Setenv("KIRKE_DEFAULT_NULL_AS", "any")
+	os.Setenv("KIRKE_DEFAULT_WITH_POINTER", "1")
+	os.Setenv("KIRKE_DEFAULT_ROOT_NAME", "MyJsonStruct")
+	os.Setenv("KIRKE_DEFAULT_OUTPUT_MODE", "inline")
+	os.Setenv("KIRKE_DEFAULT_NO_PAGER", "1")
+	defer func() {
+		os.Unsetenv("KIRKE_DEFAULT_NULL_AS")
+		os.Unsetenv("KIRKE_DEFAULT_WITH_POINTER")
+		os.Unsetenv("KIRKE_DEFAULT_ROOT_NAME")
+		os.Unsetenv("KIRKE_DEFAULT_OUTPUT_MODE")
+		os.Unsetenv("KIRKE_DEFAULT_NO_PAGER")
+	}()
+
+	args := []string{}
+	expected := &commandline.Option{
+		RootObjName:       "MyJsonStruct",
+		Json:              "",
+		FilePath:          "",
+		NullAs:            "any",
+		WithPointerFlag:   true,
+		HelpFlag:          false,
+		VersionFlag:       false,
+		ForcePipeFlag:     false,
+		NoPagerFlag:       true,
+		InlineFlag:        false,
+		OutlineFlag:       false,
+		DefaultOutputMode: "inline",
 	}
 
 	_, result, err := commandline.OptParse(args)

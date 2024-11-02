@@ -2,7 +2,7 @@
   "id": 12345,
   "name": "Sample Data",
   "description": "This is a sample JSON data with a complex structure.",
-  "active": null,
+  "nullValue": null,
   "tags": [
     "example",
     "json",
