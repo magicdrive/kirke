@@ -7,6 +7,7 @@ Features
 --------
 
 * Supports both inline and outline Golang structs definitions
+* Support options that change the interpretation of json `null`
 * Receives JSON strings directly or from a file
 * Outputs formatted Golang structs
 * Option to define struct and array fields as pointers
