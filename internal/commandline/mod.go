@@ -52,21 +52,30 @@ func OptParse(args []string) (int, *Option, error) {
 	forcePpipeFlagOpt := fs.Bool("pipe", false, "Receive a JSON string from a pipe.")
 	fs.BoolVar(forcePpipeFlagOpt, "p", false, "Receive a JSON string from a pipe.")
 
-	// --no-pager
-	var defaultNoPager = os.Getenv("KIRKE_DEFAULT_NO_PAGER") == "1"
-	noPagerFlagOpt := fs.Bool("no-pager", defaultNoPager, "Do not use a pager for output.")
+	// pagermode --pager auto|no
+	var defaultPagerMode = os.Getenv("KIRKE_DEFAULT_PAGER_MODE")
+	if !(defaultPagerMode == "no" || defaultPagerMode == "auto") {
+		defaultPagerMode = "auto"
+	}
+	var pagerMode PagerMode = PagerMode(defaultPagerMode)
+	fs.Var(&pagerMode, "pager", "Specifies whether to use a pager when necessary.")
 
 	// ouputmode --inline --outline
 	var defaultOutputMode = os.Getenv("KIRKE_DEFAULT_OUTPUT_MODE")
 	inlineFlagOpt := fs.Bool("inline", false, "Create inline struct definition output.")
 	outlineFlagOpt := fs.Bool("outline", false, "Create outline struct definition output.")
 
-	// with-pointer
-	var defaultWithPointer = os.Getenv("KIRKE_DEFAULT_WITH_POINTER") == "1"
-	withPointerOpt := fs.Bool("with-pointer", defaultWithPointer, "Make nested struct fields of pointer type.")
+	// pointer mode --pointer on|off
+	var defaultPointerMode = os.Getenv("KIRKE_DEFAULT_POINTER_MODE")
+	if !(defaultPointerMode == "on" || defaultPointerMode == "off") {
+		defaultPointerMode = "off"
+	}
+	var pointerMode PointerMode = PointerMode(defaultPointerMode)
+	fs.Var(&pointerMode, "pointer", "Make nested struct fields of pointer type.")
 
 	fs.Usage = func() {
-		fmt.Fprintln(os.Stderr, "\n\n"+helpMessage)
+		fmt.Fprintln(os.Stderr, "\nHelpOption:")
+		fmt.Fprintln(os.Stderr, "    kirke --help")
 	}
 	err := fs.Parse(args)
 	if err != nil {
@@ -78,20 +87,19 @@ func OptParse(args []string) (int, *Option, error) {
 		Json:              *jsonOpt,
 		FilePath:          *filePathOpt,
 		NullAs:            *nullAsOpt,
-		WithPointerFlag:   *withPointerOpt,
+		PointerMode:       pointerMode.String(),
 		HelpFlag:          *helpFlagOpt,
 		VersionFlag:       *versionFlagOpt,
 		ForcePipeFlag:     *forcePpipeFlagOpt,
-		NoPagerFlag:       *noPagerFlagOpt,
+		PagerMode:         pagerMode.String(),
 		InlineFlag:        *inlineFlagOpt,
 		OutlineFlag:       *outlineFlagOpt,
 		DefaultOutputMode: defaultOutputMode,
 		FlagSet:           fs,
 	}
-	OverRideHelp(fs, result.NoPagerFlag)
+	OverRideHelp(fs, result.PagerMode == "no")
 
 	return optLength, result, nil
-
 }
 
 func OverRideHelp(fs *flag.FlagSet, noPagerFlag bool) *flag.FlagSet {

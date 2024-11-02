@@ -43,11 +43,11 @@ func Excecute(version string) {
 		os.Exit(1)
 	}
 
-	result, err := core.Apply(jsonStr, opt.RootObjName, outputMode, opt.WithPointerFlag, opt.NullAs)
+	result, err := core.Apply(jsonStr, opt.RootObjName, outputMode, opt.PointerMode == "on", opt.NullAs)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error %v\n", err)
 		os.Exit(1)
 	}
 
-	commandline.GracefulPrintOut(result, opt.NoPagerFlag)
+	commandline.GracefulPrintOut(result, opt.PagerMode == "no")
 }

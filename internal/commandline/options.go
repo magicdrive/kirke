@@ -18,11 +18,11 @@ type Option struct {
 	Json              string
 	FilePath          string
 	NullAs            string
-	WithPointerFlag   bool
+	PointerMode       string
 	HelpFlag          bool
 	VersionFlag       bool
 	ForcePipeFlag     bool
-	NoPagerFlag       bool
+	PagerMode         string
 	InlineFlag        bool
 	OutlineFlag       bool
 	DefaultOutputMode string
@@ -108,4 +108,9 @@ func (cr *Option) DecideOutputMode() (int, error) {
 func isValidJSON(jsonStr string) bool {
 	var js json.RawMessage
 	return json.Unmarshal([]byte(jsonStr), &js) == nil
+}
+
+func isValidOption() error {
+	return nil
+	
 }
