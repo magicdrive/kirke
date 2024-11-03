@@ -9,7 +9,7 @@ Features
 * Supports both inline and outline Golang structs definitions
 * Support options that change the interpretation of json `null`
 * Receives JSON strings directly or from a file
-* Outputs formatted Golang structs
+* Outputs formatted Golang structs use `gofmt`
 * Option to define struct and array fields as pointers
 * Flexible with file extensions (no need for `.json`)
 * Option to disable the pager for larger outputs
@@ -30,7 +30,7 @@ Alternatively, use `go install`:
 Quick Start
 -----
 
-    cat './path/to/your.json' | kirke
+    curl -s https://api.github.com/repos/magicdrive/kirke | kirke
 
 Zsh and Bash Completion file
 -----

@@ -249,7 +249,7 @@ func TestGoTypeForInline(t *testing.T) {
 		{
 			fieldName:    "FieldEmptyArray",
 			value:        []interface{}{},
-			expectedType: "[]interface{}",
+			expectedType: "[]any",
 			expectedDef:  "",
 		},
 	}

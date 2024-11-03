@@ -62,7 +62,7 @@ func GoTypeForInline(fieldName string, keyName string, value interface{}, number
 			}
 			return "[]" + elemType, ""
 		}
-		return "[]interface{}", ""
+		return "[]" + nullTypeName, ""
 	default:
 		return reflect.TypeOf(value).String(), ""
 	}

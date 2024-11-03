@@ -52,7 +52,7 @@ func GoTypeForOutline(fieldName string, keyName string, value interface{}, withP
 				withPointer, numberStrings, boolFields, nullFields, nullTypeName)
 			return "[]" + elemType, nestedDef
 		}
-		return "[]interface{}", ""
+		return "[]" + nullTypeName, ""
 	case *OrderedMap:
 		structDef := generateOutlineStruct(fieldName, *v, withPointer, nullTypeName)
 		if withPointer {
