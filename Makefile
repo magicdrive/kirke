@@ -10,6 +10,9 @@ LDFLAGS += -X "main.version=$(VERSION)"
 PLATFORMS := linux/amd64 darwin/amd64
 GO := GO111MODULE=on CGO_ENABLED=0 go
 
+# Argments
+tag =
+
 # Default target
 .PHONY: all
 all: help
@@ -59,24 +62,24 @@ clean:
 # Publish to github.com
 .PHONY: publish
 publish:
-	@if [ -z "$(version)" ]; then \
+	@if [ -z "$(tag)" ]; then \
 		echo "Error: version is not set. Please set it and try again."; \
 		exit 1; \
 	fi
-	git tag $(version)
-	git push origin $(version)
+	git tag $(tag)
+	git push origin $(tag)
 
 
 # Show help
 .PHONY: help
 help:
 	@echo "Makefile commands:"
-	@echo "  make build                - Build all artifacts"
-	@echo "  make release-build        - Build artifacts for multiple platforms with version info"
-	@echo "  make install              - Install application. Use `go install`"
-	@echo "  make test                 - Run go test"
-	@echo "  make test-verbose         - Run go test -v with go clean -testcache"
-	@echo "  make clean                - Remove build artifacts"
-	@echo "  make publish vesion=<tag> - Publish to github.com"
-	@echo "  make help                 - Show this message"
+	@echo "  make build             - Build all artifacts"
+	@echo "  make release-build     - Build artifacts for multiple platforms with version info"
+	@echo "  make install           - Install application. Use `go install`"
+	@echo "  make test              - Run go test"
+	@echo "  make test-verbose      - Run go test -v with go clean -testcache"
+	@echo "  make clean             - Remove build artifacts"
+	@echo "  make publish tag=<tag> - Publish to github.com"
+	@echo "  make help              - Show this message"
 
