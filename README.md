@@ -37,7 +37,7 @@ Zsh and Bash Completion file
 
     git clone https://github.com/magicdrive/kirke.git
     cd kirke
-    source ./misc/completion/kirke_completion.sh
+    source ./misc/completion/kirke-completion.sh
 
 Usage
 -----
