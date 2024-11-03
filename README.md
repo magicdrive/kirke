@@ -32,6 +32,13 @@ Quick Start
 
     cat './path/to/your.json' | kirke
 
+Zsh and Bash Completion file
+-----
+
+    git clone https://github.com/magicdrive/kirke.git
+    cd kirke
+    source ./misc/completion/kirke_completion.sh
+
 Usage
 -----
 
