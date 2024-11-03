@@ -52,26 +52,30 @@ func OptParse(args []string) (int, *Option, error) {
 	forcePpipeFlagOpt := fs.Bool("pipe", false, "Receive a JSON string from a pipe.")
 	fs.BoolVar(forcePpipeFlagOpt, "p", false, "Receive a JSON string from a pipe.")
 
-	// pagermode --pager auto|no
-	var defaultPagerMode = os.Getenv("KIRKE_DEFAULT_PAGER_MODE")
-	if !(defaultPagerMode == "no" || defaultPagerMode == "auto") {
-		defaultPagerMode = "auto"
+	// pagermode --auto-pager on|off
+	var defaultAutoPagerMode = os.Getenv("KIRKE_DEFAULT_AUTO_PAGER_MODE")
+	if !(defaultAutoPagerMode == SwitchOn || defaultAutoPagerMode == SwitchOff) {
+		defaultAutoPagerMode = SwitchOn
 	}
-	var pagerMode PagerMode = PagerMode(defaultPagerMode)
-	fs.Var(&pagerMode, "pager", "Specifies whether to use a pager when necessary.")
+	var autoPagerMode OnOffSwitch = OnOffSwitch(defaultAutoPagerMode)
+	fs.Var(&autoPagerMode, "auto-pager", "Specifies whether to use a pager when necessary.")
+	fs.Var(&autoPagerMode, "pager", "Specifies whether to use a pager when necessary.")
 
 	// ouputmode --inline --outline
 	var defaultOutputMode = os.Getenv("KIRKE_DEFAULT_OUTPUT_MODE")
 	inlineFlagOpt := fs.Bool("inline", false, "Create inline struct definition output.")
+	fs.BoolVar(inlineFlagOpt, "i", false, "Create inline struct definition output.")
 	outlineFlagOpt := fs.Bool("outline", false, "Create outline struct definition output.")
+	fs.BoolVar(outlineFlagOpt, "o", false, "Create outline struct definition output.")
 
-	// pointer mode --pointer on|off
-	var defaultPointerMode = os.Getenv("KIRKE_DEFAULT_POINTER_MODE")
-	if !(defaultPointerMode == "on" || defaultPointerMode == "off") {
-		defaultPointerMode = "off"
+	// pointer mode --pointer-struct on|off
+	var defaultPointerStructMode = os.Getenv("KIRKE_DEFAULT_POINTER_STRUCT_MODE")
+	if !(defaultPointerStructMode == SwitchOn || defaultPointerStructMode == SwitchOff) {
+		defaultPointerStructMode = SwitchOff
 	}
-	var pointerMode PointerMode = PointerMode(defaultPointerMode)
-	fs.Var(&pointerMode, "pointer", "Make nested struct fields of pointer type.")
+	var pointerStructMode OnOffSwitch = OnOffSwitch(defaultPointerStructMode)
+	fs.Var(&pointerStructMode, "pointer-struct", "Make nested struct fields of pointer type.")
+	fs.Var(&pointerStructMode, "pointer", "Make nested struct fields of pointer type.")
 
 	fs.Usage = func() {
 		fmt.Fprintln(os.Stderr, "\nHelpOption:")
@@ -87,17 +91,17 @@ func OptParse(args []string) (int, *Option, error) {
 		Json:              *jsonOpt,
 		FilePath:          *filePathOpt,
 		NullAs:            *nullAsOpt,
-		PointerMode:       pointerMode.String(),
+		PointerStructMode: pointerStructMode.String(),
 		HelpFlag:          *helpFlagOpt,
 		VersionFlag:       *versionFlagOpt,
 		ForcePipeFlag:     *forcePpipeFlagOpt,
-		PagerMode:         pagerMode.String(),
+		AutoPagerMode:     autoPagerMode.String(),
 		InlineFlag:        *inlineFlagOpt,
 		OutlineFlag:       *outlineFlagOpt,
 		DefaultOutputMode: defaultOutputMode,
 		FlagSet:           fs,
 	}
-	OverRideHelp(fs, result.PagerMode == "no")
+	OverRideHelp(fs, result.AutoPagerMode == SwitchOff)
 
 	return optLength, result, nil
 }

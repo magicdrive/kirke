@@ -5,32 +5,22 @@ import (
 	"strings"
 )
 
-type PagerMode string
+const (
+	SwitchOn  = "on"
+	SwitchOff = "off"
+)
 
-func (m *PagerMode) Set(value string) error {
-	switch strings.ToLower(value) {
-	case "auto", "no":
-		*m = PagerMode(value)
-		return nil
-	default:
-		return fmt.Errorf("invalid pager mode: %s. Allowed values are 'auto', 'no'", value)
-	}
-}
-func (m *PagerMode) String() string {
-	return string(*m)
-}
+type OnOffSwitch string
 
-type PointerMode string
-
-func (m *PointerMode) Set(value string) error {
+func (m *OnOffSwitch) Set(value string) error {
 	switch strings.ToLower(value) {
 	case "on", "off":
-		*m = PointerMode(value)
+		*m = OnOffSwitch(value)
 		return nil
 	default:
-		return fmt.Errorf("invalid pointer mode: %s. Allowed values are 'on', 'off'", value)
+		return fmt.Errorf("invalid value: %s. Allowed values are 'on', 'off'", value)
 	}
 }
-func (m *PointerMode) String() string {
+func (m *OnOffSwitch) String() string {
 	return string(*m)
 }

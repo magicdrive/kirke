@@ -22,8 +22,8 @@ func compareOptions(t *testing.T, expected, result *commandline.Option) {
 	if expected.NullAs != result.NullAs {
 		t.Errorf("Expected NullAs %q, got %q", expected.NullAs, result.NullAs)
 	}
-	if expected.PointerMode != result.PointerMode {
-		t.Errorf("Expected PointerMode %v, got %v", expected.PointerMode, result.PointerMode)
+	if expected.PointerStructMode != result.PointerStructMode {
+		t.Errorf("Expected PointerStructMode %v, got %v", expected.PointerStructMode, result.PointerStructMode)
 	}
 	if expected.HelpFlag != result.HelpFlag {
 		t.Errorf("Expected HelpFlag %v, got %v", expected.HelpFlag, result.HelpFlag)
@@ -34,8 +34,8 @@ func compareOptions(t *testing.T, expected, result *commandline.Option) {
 	if expected.ForcePipeFlag != result.ForcePipeFlag {
 		t.Errorf("Expected PipeFlag %v, got %v", expected.ForcePipeFlag, result.ForcePipeFlag)
 	}
-	if expected.PagerMode != result.PagerMode {
-		t.Errorf("Expected PagerMode %v, got %v", expected.PagerMode, result.PagerMode)
+	if expected.AutoPagerMode != result.AutoPagerMode {
+		t.Errorf("Expected AutoPagerMode %v, got %v", expected.AutoPagerMode, result.AutoPagerMode)
 	}
 	if expected.DefaultOutputMode != result.DefaultOutputMode {
 		t.Errorf("Expected DefaultOutputMode %v, got %v", expected.DefaultOutputMode, result.DefaultOutputMode)
@@ -49,11 +49,11 @@ func TestOptParse_NoArgs(t *testing.T) {
 		Json:              "",
 		FilePath:          "",
 		NullAs:            "interface{}",
-		PointerMode:       "off",
+		PointerStructMode: "off",
 		HelpFlag:          false,
 		VersionFlag:       false,
 		ForcePipeFlag:     false,
-		PagerMode:         "auto",
+		AutoPagerMode:     "on",
 		InlineFlag:        false,
 		OutlineFlag:       true,
 		DefaultOutputMode: "",
@@ -78,18 +78,18 @@ func TestOptParse_WithFlags(t *testing.T) {
 		"--help",
 		"--version",
 		"--pipe",
-		"--pager", "no",
+		"--pager", "off",
 	}
 	expected := &commandline.Option{
 		RootObjName:       "TestStruct",
 		Json:              `{"key": "value"}`,
 		FilePath:          "input.json",
 		NullAs:            "any",
-		PointerMode:       "on",
+		PointerStructMode: "on",
 		HelpFlag:          true,
 		VersionFlag:       true,
 		ForcePipeFlag:     true,
-		PagerMode:         "no",
+		AutoPagerMode:     "off",
 		InlineFlag:        true,
 		OutlineFlag:       true,
 		DefaultOutputMode: "",
@@ -107,16 +107,16 @@ func TestOptParse_WithFlags(t *testing.T) {
 func TestOptParse_WithEnviroments(t *testing.T) {
 
 	os.Setenv("KIRKE_DEFAULT_NULL_AS", "any")
-	os.Setenv("KIRKE_DEFAULT_POINTER_MODE", "on")
+	os.Setenv("KIRKE_DEFAULT_POINTER_STRUCT_MODE", "on")
 	os.Setenv("KIRKE_DEFAULT_ROOT_NAME", "MyJsonStruct")
 	os.Setenv("KIRKE_DEFAULT_OUTPUT_MODE", "inline")
-	os.Setenv("KIRKE_DEFAULT_PAGER_MODE", "no")
+	os.Setenv("KIRKE_DEFAULT_AUTO_PAGER_MODE", "off")
 	defer func() {
 		os.Unsetenv("KIRKE_DEFAULT_NULL_AS")
-		os.Unsetenv("KIRKE_DEFAULT_POINTER_MODE")
+		os.Unsetenv("KIRKE_DEFAULT_POINTER_STRUCT_MODE")
 		os.Unsetenv("KIRKE_DEFAULT_ROOT_NAME")
 		os.Unsetenv("KIRKE_DEFAULT_OUTPUT_MODE")
-		os.Unsetenv("KIRKE_DEFAULT_PAGER_MODE")
+		os.Unsetenv("KIRKE_DEFAULT_AUTO_PAGER_MODE")
 	}()
 
 	args := []string{}
@@ -125,11 +125,11 @@ func TestOptParse_WithEnviroments(t *testing.T) {
 		Json:              "",
 		FilePath:          "",
 		NullAs:            "any",
-		PointerMode:       "on",
+		PointerStructMode: "on",
 		HelpFlag:          false,
 		VersionFlag:       false,
 		ForcePipeFlag:     false,
-		PagerMode:         "no",
+		AutoPagerMode:     "off",
 		InlineFlag:        false,
 		OutlineFlag:       false,
 		DefaultOutputMode: "inline",

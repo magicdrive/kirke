@@ -18,11 +18,11 @@ type Option struct {
 	Json              string
 	FilePath          string
 	NullAs            string
-	PointerMode       string
+	PointerStructMode string
 	HelpFlag          bool
 	VersionFlag       bool
 	ForcePipeFlag     bool
-	PagerMode         string
+	AutoPagerMode     string
 	InlineFlag        bool
 	OutlineFlag       bool
 	DefaultOutputMode string
@@ -112,5 +112,5 @@ func isValidJSON(jsonStr string) bool {
 
 func isValidOption() error {
 	return nil
-	
+
 }
