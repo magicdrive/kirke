@@ -21,7 +21,7 @@ To install `kirke`, clone the repository and build the binary:
 
     git clone https://github.com/magicdrive/kirke.git
     cd kirke
-    make build
+    make install
 
 Alternatively, use `go install`:
 

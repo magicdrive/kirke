@@ -22,8 +22,8 @@ build: clean
 	@chmod 755 $(BUILD_DIR)/$(BINARY_NAME)
 
 # Build artifacts for all platforms and release
-.PHONY: release
-release: clean $(PLATFORMS)
+.PHONY: release-build
+release-build: clean $(PLATFORMS)
 	@echo "Release files are created in the $(BUILD_DIR) directory."
 
 # Build each platform
@@ -45,6 +45,7 @@ test-verbose:
 	@$(GO) clean -testcache
 	@$(GO) test -v $(CURDIR)/...
 
+# Install application. Use `go install`
 .PHONY: install
 install:
 	@echo "Installing kirke..."
@@ -55,14 +56,27 @@ install:
 clean:
 	@rm -rf $(BUILD_DIR)
 
+# Publish to github.com
+.PHONY: publish
+publish:
+	@if [ -z "$(version)" ]; then \
+		echo "Error: version is not set. Please set it and try again."; \
+		exit 1; \
+	fi
+	git tag $(version)
+	git push origin $(version)
+
+
 # Show help
 .PHONY: help
 help:
 	@echo "Makefile commands:"
-	@echo "  make build          - Build all artifacts"
-	@echo "  make release        - Build artifacts for multiple platforms with version info"
-	@echo "  make test           - Run go test"
-	@echo "  make test-verbose   - Run go test -v with go clean -testcache"
-	@echo "  make clean          - Remove build artifacts"
-	@echo "  make help           - Show this message"
+	@echo "  make build                - Build all artifacts"
+	@echo "  make release-build        - Build artifacts for multiple platforms with version info"
+	@echo "  make install              - Install application. Use `go install`"
+	@echo "  make test                 - Run go test"
+	@echo "  make test-verbose         - Run go test -v with go clean -testcache"
+	@echo "  make clean                - Remove build artifacts"
+	@echo "  make publish vesion=<tag> - Publish to github.com"
+	@echo "  make help                 - Show this message"
 
