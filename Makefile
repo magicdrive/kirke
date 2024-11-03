@@ -7,7 +7,7 @@ BINARY_NAME = kirke
 VERSION = $(shell git describe --tags --always)
 LDFLAGS += -X "main.version=$(VERSION)"
 
-PLATFORMS := linux/amd64 darwin/amd64
+PLATFORMS := linux/amd64 darwin/amd64 windows/amd64
 GO := GO111MODULE=on CGO_ENABLED=0 go
 
 # Argments
