@@ -4,9 +4,8 @@ import (
 	"encoding/json"
 	"go/format"
 	"reflect"
-	"testing"
-
 	"strings"
+	"testing"
 
 	"github.com/magicdrive/kirke/internal/commandline"
 	"github.com/magicdrive/kirke/internal/common"

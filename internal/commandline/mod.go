@@ -1,10 +1,11 @@
 package commandline
 
 import (
-	_ "embed"
 	"flag"
 	"fmt"
 	"os"
+
+	_ "embed"
 )
 
 //go:embed help.txt

@@ -36,4 +36,3 @@ func Apply(jsonStr string, rootObjName string, OutPutMode int, withPointer bool,
 
 	return string(formattedCode), nil
 }
-

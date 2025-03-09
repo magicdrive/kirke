@@ -36,4 +36,3 @@ func ToSnakeCase(input string) string {
 	snake := re.ReplaceAllString(input, "${1}_${2}")
 	return strings.ToLower(snake)
 }
-
