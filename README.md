@@ -114,7 +114,12 @@ Read JSON data from a pipe, use pointers for nested fields, and output as a stru
 
     echo '{"key": "value", "obj": {"address": null} }' | kirke -a "*string"
 
-LICENCE
+Author
+-----
+
+Copyright (c) 2025 Hiroshi IKEGAMI
+
+Licence
 -----
 
 [MIT License](https://github.com/magicdrive/kirke/LICENCE)
