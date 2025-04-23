@@ -36,7 +36,7 @@ func OptParse(args []string) (int, *Option, error) {
 	// --null-as
 	var defaultNullAs = os.Getenv("KIRKE_DEFAULT_NULL_AS")
 	if defaultNullAs == "" {
-		defaultNullAs = "interface{}"
+		defaultNullAs = "any"
 	}
 	nullAsOpt := fs.String("null-as", defaultNullAs, "Specified type name used to replace nulls from json.")
 	fs.StringVar(nullAsOpt, "a", defaultNullAs, "Specified type name used to replace nulls from json.")
