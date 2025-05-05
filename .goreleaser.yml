@@ -1,5 +1,15 @@
+project_name: kirke
+
+release:
+  github:
+    owner: magicdrive
+    name: kirke
+  draft: false
+  prerelease: false
+
 builds:
-  - goos:
+  - id: kirke
+    goos:
       - linux
       - darwin
       - windows
@@ -10,8 +20,33 @@ builds:
       - -s -w -X "main.version=v{{.Version}}"
     env:
       - CGO_ENABLED=0
+    binary: kirke
+    main: ./main.go
+
 archives:
   - id: tar.gz
     format: tar.gz
   - id: binary
     format: binary
+
+checksum:
+  name_template: "{{ .ProjectName }}_checksums.txt"
+
+brews:
+  - name: kirke
+    repository:
+      owner: magicdrive
+      name: homebrew-tap
+      branch: main
+    homepage: "https://github.com/magicdrive/kirke"
+    description: "Yet another command-line tool for converting JSON strings into Golang struct definitions."
+    license: "MIT"
+    ids: [tar.gz]
+    install: |
+      bin.install "kirke"
+    test: |
+      system "#{bin}/kirke", "--version"
+    commit_author:
+      name: magicdrive bot
+      email: hiroshi.ikegami+githubbot@magicdrive.jp
+
