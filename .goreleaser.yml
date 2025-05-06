@@ -47,8 +47,8 @@ brews:
     ids: [tar.gz]
     install: |
       bin.install "kirke"
-      bash_completion.install "completions/kirke-completion.sh" => "kirke"
-      zsh_completion.install "completions/kirke-completion.sh"
+      bash_completion.install "#{prefix}/completions/kirke-completion.sh" => "kirke"
+      zsh_completion.install "#{prefix}/completions/kirke-completion.sh"
     test: |
       system "#{bin}/kirke", "--version"
     commit_author:
