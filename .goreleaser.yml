@@ -46,8 +46,10 @@ brews:
     install: |
       bin.install "kirke"
     extra_install: |
+      cp "completions/kirke-completion.sh", "completions/kirke.zsh"
+
       bash_completion.install "completions/kirke-completion.sh" => "kirke"
-      zsh_completion.install "completions/kirke-completion.sh"
+      zsh_completion.install "completions/kirke.zsh" => "_kirke"
     test: |
       system "#{bin}/kirke", "--version"
     commit_author:
