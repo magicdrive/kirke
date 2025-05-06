@@ -22,13 +22,13 @@ builds:
       - CGO_ENABLED=0
     binary: kirke
     main: ./main.go
-    files:
-     - src: misc/completion/kirke-completion.sh
-       dst: completions/kirke-completion.sh
 
 archives:
   - id: tar.gz
     format: tar.gz
+    files:
+     - src: misc/completion/kirke-completion.sh
+       dst: completions/kirke-completion.sh
   - id: binary
     format: binary
 

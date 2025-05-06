@@ -66,7 +66,7 @@ goreg:
 
 # Publish to github.com
 .PHONY: publish
-publish:
+publish: release-build
 	@if [ -z "$(tag)" ]; then \
 		echo "Error: version is not set. Please set it and try again."; \
 		exit 1; \
