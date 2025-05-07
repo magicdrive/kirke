@@ -5,7 +5,7 @@ release:
     owner: magicdrive
     name: kirke
   draft: false
-  prerelease: false
+  prerelease: "false"
 
 builds:
   - id: kirke
@@ -15,7 +15,7 @@ builds:
       - windows
     ignore:
       - goos: darwin
-        goarch: 386
+        goarch: "386"
     ldflags:
       - -s -w -X "main.version=v{{.Version}}"
     env:
@@ -27,8 +27,12 @@ archives:
   - id: tar.gz
     format: tar.gz
     files:
-     - src: misc/completion/kirke-completion.sh
+     - src: misc/completions/kirke-completion.sh
        dst: completions/kirke-completion.sh
+     - src: misc/completions/zsh/_kirke
+       dst: completions/zsh/_kirke
+     - src: misc/completions/bash/kirke-completion.bash
+       dst: completions/bash/kirke-completion.bash
 
 checksum:
   name_template: "{{ .ProjectName }}_checksums.txt"
@@ -46,10 +50,8 @@ brews:
     install: |
       bin.install "kirke"
     extra_install: |
-      cp "completions/kirke-completion.sh", "completions/kirke.zsh"
-
-      bash_completion.install "completions/kirke-completion.sh" => "kirke"
-      zsh_completion.install "completions/kirke.zsh" => "_kirke"
+      bash_completion.install "completions/bash/kirke-completion.bash" => "kirke"
+      zsh_completion.install "completions/zsh/_kirke" => "_kirke"
     test: |
       system "#{bin}/kirke", "--version"
     commit_author:
