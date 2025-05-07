@@ -27,6 +27,10 @@ Alternatively, use `go install`:
 
     go install github.com/magicdrive/kirke@latest
 
+You can install goreg using  `homebrew`:
+
+    brew install magicdrive/tap/kirke
+
 Quick Start
 -----
 
