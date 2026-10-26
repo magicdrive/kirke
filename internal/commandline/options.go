@@ -40,30 +40,27 @@ func (cr *Option) DecideJSONStr() (string, error) {
 		}
 	}
 
-	pipeF := func() (string, error) {
+	// The piped input; ok is false when nothing is piped.
+	pipeF := func() (string, bool, error) {
 		if cr.PipeReader == nil {
 			cr.PipeReader = defaultPipeReader
 		}
+		return cr.PipeReader.GetPipeBuffer()
+	}
 
-		if pipeBuf, ok := cr.PipeReader.GetPipeBuffer(); ok {
-			return pipeBuf, nil
-		} else {
+	// --pipe option: the piped input above all else
+	if cr.ForcePipeFlag {
+		pipeBuf, ok, err := pipeF()
+		if err != nil {
+			return "", err
+		}
+		if !ok {
 			return "", fmt.Errorf("Nothing is coming through unix pipe.")
 		}
+		return validationF(pipeBuf)
 	}
 
 	var jsonStr string
-
-	jsonStr, err := pipeF()
-
-	// --pipe option
-	if cr.ForcePipeFlag {
-		if err != nil {
-			return "", err
-		} else {
-			return validationF(jsonStr)
-		}
-	}
 
 	// --input-file option
 	if cr.FilePath != "" {
@@ -77,6 +74,19 @@ func (cr *Option) DecideJSONStr() (string, error) {
 	// --json option
 	if cr.Json != "" {
 		jsonStr = cr.Json
+	}
+
+	// Neither --json nor --file: the piped input, if any. Standard input is
+	// read only here and with --pipe, so that kirke --json and kirke --file
+	// neither wait for standard input nor consume it.
+	if cr.Json == "" && cr.FilePath == "" {
+		pipeBuf, ok, err := pipeF()
+		if err != nil {
+			return "", err
+		}
+		if ok {
+			jsonStr = pipeBuf
+		}
 	}
 
 	if jsonStr == "" {

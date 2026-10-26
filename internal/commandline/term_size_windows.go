@@ -40,7 +40,7 @@ var (
 	procGetConsoleScreenBufferInfo = kernel32.NewProc("GetConsoleScreenBufferInfo")
 )
 
-func ShowWithLess(message string) {
+func ShowWithLess(message string) error {
 	pagerCmd := os.Getenv("PAGER")
 	if pagerCmd == "" {
 		pagerCmd = "cmd /c more"
@@ -50,9 +50,10 @@ func ShowWithLess(message string) {
 	cmd.Stdin = bytes.NewReader([]byte(message))
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	err := cmd.Run()
-
-	if err != nil {
-		fmt.Print(message)
+	if err := cmd.Run(); err != nil {
+		// No usable pager: print the message as is.
+		_, err := fmt.Print(message)
+		return err
 	}
+	return nil
 }
