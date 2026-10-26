@@ -1,0 +1,124 @@
+# kirke is released with Hephaestus (https://github.com/magicdrive/hephaestus).
+#
+# The release workflow (.github/workflows/release.yml) runs build, archive and
+# checksum in a read-only job, then publishes the GitHub Release and opens a
+# pull request on magicdrive/homebrew-tap from a job in the `release`
+# environment. `make snapshot` runs build, archive and checksum locally.
+#
+# The asset layout is kept identical to the releases GoReleaser produced up to
+# v1.2.8: eight targets (no darwin/386), tar.gz on every OS including
+# Windows, the binary and the completion scripts at the same archive paths,
+# kirke_checksums.txt, and `kirke --version` printing "kirke version vX.Y.Z".
+# scripts/verify-dist.sh checks exactly that, in CI and before publishing.
+version: 1
+
+project:
+  name: kirke
+  # The formula's desc: Homebrew allows at most 80 characters and no
+  # trailing period (the GoReleaser formula had 89 and a period).
+  description: Yet another command-line tool for converting JSON into Go struct definitions
+  homepage: https://github.com/magicdrive/kirke
+  license: MIT
+
+builds:
+  - id: kirke
+    matrix:
+      os: [darwin, linux, windows]
+      arch: ["386", amd64, arm64]
+      exclude:
+        - os: darwin
+          arch: "386"
+    command:
+      - go
+      - build
+      - -trimpath
+      - -ldflags
+      # Same value as GoReleaser's `-s -w -X "main.version=v{{.Version}}"`.
+      - "-s -w -X main.version=v{{ .Version }}"
+      - -o
+      - "dist/bin/{{ .OS }}_{{ .Arch }}/kirke{{ .Ext }}"
+      - .
+    env:
+      GOOS: "{{ .OS }}"
+      GOARCH: "{{ .Arch }}"
+      CGO_ENABLED: "0"
+      # The release toolchain, pinned here rather than with a go.mod
+      # `toolchain` directive, so that CI keeps testing with the oldest Go
+      # the `go` line allows. Whatever Go is on PATH (a workstation, the
+      # runner's setup-go), the go command switches to exactly this version.
+      # scripts/verify-dist.sh checks that every binary records it.
+      # (v1.2.8 was built by GoReleaser with go1.24.2.)
+      GOTOOLCHAIN: go1.27.3
+    output: "dist/bin/{{ .OS }}_{{ .Arch }}/kirke{{ .Ext }}"
+
+archives:
+  - id: kirke
+    name: "{{ .Project }}_{{ .Version }}_{{ .OS }}_{{ .Arch }}"
+    # tar.gz on Windows too: every release so far ships
+    # kirke_<version>_windows_<arch>.tar.gz, and the aqua registry
+    # (magicdrive/aqua-registry) resolves that name.
+    format: tar.gz
+    files:
+      - src: "dist/bin/{{ .OS }}_{{ .Arch }}/kirke{{ .Ext }}"
+        dst: "kirke{{ .Ext }}"
+        mode: "0755"
+      - src: misc/completions/kirke-completion.sh
+        dst: completions/kirke-completion.sh
+        mode: "0644"
+      - src: misc/completions/bash/kirke-completion.bash
+        dst: completions/bash/kirke-completion.bash
+        mode: "0644"
+      - src: misc/completions/zsh/_kirke
+        dst: completions/zsh/_kirke
+        mode: "0644"
+
+checksum:
+  # Unchanged since v1.2.2; the aqua registry's override for v1.2.2 and later
+  # reads this name.
+  name: "{{ .Project }}_checksums.txt"
+
+release:
+  github:
+    owner: magicdrive
+    name: kirke
+    # The repository keeps no CHANGELOG; GitHub writes the notes from the
+    # merged pull requests when the release is created.
+    generate_notes: true
+
+brews:
+  - name: kirke
+    ids: [kirke]
+    commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
+    # magicdrive/homebrew-tap keeps its formulae at the repository root;
+    # creating Formula/ there would hide them from Homebrew, so `directory`
+    # stays unset. Prereleases (v1.2.3-rc.1) never update the tap.
+    skip_upload: auto
+    install: |
+      bin.install "kirke"
+    # The scripts shipped in the archive, installed as before:
+    # bash_completion/kirke and zsh_completion/_kirke.
+    completions:
+      files:
+        bash: completions/bash/kirke-completion.bash
+        zsh: completions/zsh/_kirke
+    test: |
+      assert_match "kirke version v#{version}", shell_output("#{bin}/kirke --version")
+      # The trailing newline matters: kirke ignores a last line without one.
+      output = pipe_output("#{bin}/kirke --pipe --auto-pager off", "{\"name\":\"kirke\"}\n")
+      assert_match "Name string `json:\"name\"`", output
+    commit_author:
+      name: magicdrive bot
+      email: hiroshi.ikegami+githubbot@magicdrive.jp
+    repository:
+      owner: magicdrive
+      name: homebrew-tap
+      pull_request:
+        enabled: true
+
+# Release safety checks before a tag is pushed. `make publish vX.Y.Z` and
+# `make publish-check vX.Y.Z` (hephaestus publish) run them as one gate;
+# `make preflight tag=vX.Y.Z` runs them alone
+# (hephaestus preflight --tag vX.Y.Z --strict).
+preflight:
+  workflow: release.yml
+  environment: release
