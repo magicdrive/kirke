@@ -2,6 +2,7 @@ package commandline
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 
@@ -36,7 +37,7 @@ func (cr *Option) DecideJSONStr() (string, error) {
 		if isValidJSON(jsonStr) {
 			return jsonStr, nil
 		} else {
-			return "", fmt.Errorf("Your JSON string is corrupted")
+			return "", errors.New("your JSON string is corrupted")
 		}
 	}
 
@@ -55,7 +56,7 @@ func (cr *Option) DecideJSONStr() (string, error) {
 			return "", err
 		}
 		if !ok {
-			return "", fmt.Errorf("Nothing is coming through unix pipe.")
+			return "", errors.New("nothing is coming through the pipe")
 		}
 		return validationF(pipeBuf)
 	}
@@ -67,7 +68,7 @@ func (cr *Option) DecideJSONStr() (string, error) {
 		if fileBuf, err := common.GetFileContent(cr.FilePath); err == nil {
 			jsonStr = fileBuf
 		} else {
-			return "", fmt.Errorf("Could not read file: %s", cr.FilePath)
+			return "", fmt.Errorf("could not read file: %w", err)
 		}
 	}
 
@@ -96,21 +97,20 @@ func (cr *Option) DecideJSONStr() (string, error) {
 	return validationF(jsonStr)
 }
 
+// DecideOutputMode returns the output mode: --inline or --outline, else
+// KIRKE_DEFAULT_OUTPUT_MODE ("inline" or "outline"), else outline. Both
+// flags together are an error.
 func (cr *Option) DecideOutputMode() (int, error) {
-	if cr.InlineFlag == true && cr.OutlineFlag == false {
+	switch {
+	case cr.InlineFlag && cr.OutlineFlag:
+		return -1, errors.New("cannot enable --inline and --outline at the same time")
+	case cr.InlineFlag:
 		return OutputModeInline, nil
-	} else if cr.InlineFlag == false && cr.OutlineFlag == true {
+	case cr.OutlineFlag:
 		return OutputModeOutline, nil
-	} else if cr.InlineFlag == false && cr.OutlineFlag == false {
-		if cr.DefaultOutputMode == "inline" {
-			return OutputModeInline, nil
-		} else if cr.DefaultOutputMode == "outline" {
-			return OutputModeOutline, nil
-		}
-		return OutputModeOutline, nil
-	} else if cr.InlineFlag == true && cr.OutlineFlag == true {
-		return -1, fmt.Errorf("cannot enable --inline and --outline at the same time.")
-	} else {
+	case cr.DefaultOutputMode == "inline":
+		return OutputModeInline, nil
+	default:
 		return OutputModeOutline, nil
 	}
 }
@@ -118,9 +118,4 @@ func (cr *Option) DecideOutputMode() (int, error) {
 func isValidJSON(jsonStr string) bool {
 	var js json.RawMessage
 	return json.Unmarshal([]byte(jsonStr), &js) == nil
-}
-
-func isValidOption() error {
-	return nil
-
 }

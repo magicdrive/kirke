@@ -12,7 +12,7 @@ import (
 func Excecute(version string) {
 	optlength, opt, err := commandline.OptParse(os.Args[1:])
 	if err != nil {
-		log.Fatalf("Faital Error: %v\n", err)
+		log.Fatalf("Fatal error: %v", err)
 	}
 
 	if opt.VersionFlag {
@@ -26,7 +26,7 @@ func Excecute(version string) {
 
 	jsonStr, err := opt.DecideJSONStr()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	} else if jsonStr == "" {
 		if optlength > 0 {
@@ -39,18 +39,18 @@ func Excecute(version string) {
 
 	outputMode, err := opt.DecideOutputMode()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 
 	result, err := core.Apply(jsonStr, opt.RootObjName, outputMode, opt.PointerStructMode == "on", opt.NullAs)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 
 	if err := commandline.GracefulPrintOut(result, opt.AutoPagerMode == "off"); err != nil {
-		fmt.Fprintf(os.Stderr, "Error %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 }

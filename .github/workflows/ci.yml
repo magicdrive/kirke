@@ -34,6 +34,8 @@ jobs:
         run: make fmt-check
       - name: go vet (host and windows)
         run: make vet
+      - name: staticcheck (host and windows)
+        run: make staticcheck
       - name: go mod tidy
         run: make tidy-check
       - name: govulncheck
