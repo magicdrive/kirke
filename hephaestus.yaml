@@ -103,8 +103,9 @@ brews:
         zsh: completions/zsh/_kirke
     test: |
       assert_match "kirke version v#{version}", shell_output("#{bin}/kirke --version")
-      # The trailing newline matters: kirke ignores a last line without one.
-      output = pipe_output("#{bin}/kirke --pipe --auto-pager off", "{\"name\":\"kirke\"}\n")
+      # No trailing newline: the last line counts without one (up to v1.2.8,
+      # kirke dropped it).
+      output = pipe_output("#{bin}/kirke --pipe --auto-pager off", "{\"name\":\"kirke\"}")
       assert_match "Name string `json:\"name\"`", output
     commit_author:
       name: magicdrive bot
