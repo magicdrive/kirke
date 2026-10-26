@@ -49,5 +49,8 @@ func Excecute(version string) {
 		os.Exit(1)
 	}
 
-	commandline.GracefulPrintOut(result, opt.AutoPagerMode == "off")
+	if err := commandline.GracefulPrintOut(result, opt.AutoPagerMode == "off"); err != nil {
+		fmt.Fprintf(os.Stderr, "Error %v\n", err)
+		os.Exit(1)
+	}
 }
