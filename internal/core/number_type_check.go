@@ -26,9 +26,8 @@ func parseNumber(num json.Number) string {
 			return "*big.Float"
 		}
 	} else {
-		intValue := new(big.Int)
-		intValue, ok := intValue.SetString(num.String(), 10)
-		if !ok {
+		// Only whether it parses matters: the type is *big.Int either way.
+		if _, ok := new(big.Int).SetString(num.String(), 10); !ok {
 			//Error converting to big.Int:
 			return "interface{}"
 		}

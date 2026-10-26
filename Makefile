@@ -37,6 +37,7 @@ HEPHAESTUS ?= go run github.com/magicdrive/hephaestus@$(HEPHAESTUS_VERSION)
 # The release tool behind the publish targets (tests replace it with a stub).
 PUBLISH ?= $(HEPHAESTUS) publish
 GOVULNCHECK_VERSION ?= v1.9.0
+STATICCHECK_VERSION ?= 2026.2.2
 ACTIONLINT_VERSION ?= v1.7.12
 
 # Tag of the local, never published build used by the Homebrew end-to-end
@@ -104,14 +105,23 @@ vet:
 	@$(GO) vet ./...
 	@GOOS=windows $(GO) vet ./...
 
+# Run staticcheck for the host and for Windows. It is installed into
+# tmp/tools (`go run` would build it for GOOS=windows as well).
+STATICCHECK_DIR = $(CURDIR)/tmp/tools/staticcheck-$(STATICCHECK_VERSION)
+.PHONY: staticcheck
+staticcheck:
+	@GOBIN="$(STATICCHECK_DIR)" $(GO) install honnef.co/go/tools/cmd/staticcheck@$(STATICCHECK_VERSION)
+	@"$(STATICCHECK_DIR)/staticcheck" ./...
+	@GOOS=windows "$(STATICCHECK_DIR)/staticcheck" ./...
+
 # Fail when go.mod is not tidy
 .PHONY: tidy-check
 tidy-check:
 	@$(GO) mod tidy -diff
 
-# The lint checks: gofmt and go vet
+# The lint checks: gofmt, go vet and staticcheck
 .PHONY: lint
-lint: fmt-check vet
+lint: fmt-check vet staticcheck
 
 # Known vulnerabilities in the standard library of the toolchain releases are
 # built with (builds[].env.GOTOOLCHAIN in hephaestus.yaml), whatever
@@ -277,7 +287,8 @@ help:
 	@echo "  make fmt               - Format the Go sources with gofmt"
 	@echo "  make fmt-check         - Fail when a Go source is not gofmt-formatted"
 	@echo "  make vet               - Run go vet (host and windows)"
-	@echo "  make lint              - Run fmt-check and vet"
+	@echo "  make staticcheck       - Run staticcheck (host and windows)"
+	@echo "  make lint              - Run fmt-check, vet and staticcheck"
 	@echo "  make tidy-check        - Fail when go.mod is not tidy"
 	@echo "  make vuln              - Run govulncheck with the release toolchain"
 	@echo "  make smoke             - Build and run --version, --help and a conversion"

@@ -96,25 +96,6 @@ func (o *OrderedMap) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-func convertNumbersToJSONNumber(value interface{}) interface{} {
-	switch v := value.(type) {
-	case float64:
-		return json.Number(fmt.Sprintf("%v", v))
-	case []interface{}:
-		for i := range v {
-			v[i] = convertNumbersToJSONNumber(v[i])
-		}
-		return v
-	case map[string]interface{}:
-		for k, val := range v {
-			v[k] = convertNumbersToJSONNumber(val)
-		}
-		return v
-	default:
-		return value
-	}
-}
-
 func decodeJSONArray(b json.RawMessage, result *[]interface{}) error {
 	dec := json.NewDecoder(bytes.NewReader(b))
 	if _, err := dec.Token(); err != nil {

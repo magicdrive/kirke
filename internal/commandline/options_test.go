@@ -2,7 +2,9 @@ package commandline_test
 
 import (
 	"errors"
+	"io/fs"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -211,11 +213,63 @@ func TestDecideOutputMode(t *testing.T) {
 			}
 
 			if tt.expectError && err != nil {
-				expectedErrorMsg := "cannot enable --inline and --outline at the same time."
+				expectedErrorMsg := "cannot enable --inline and --outline at the same time"
 				if err.Error() != expectedErrorMsg {
 					t.Errorf("Expected error message: %s, got: %s", expectedErrorMsg, err.Error())
 				}
 			}
 		})
+	}
+}
+
+// TestDecideOutputMode_Default: without --inline/--outline the mode comes
+// from KIRKE_DEFAULT_OUTPUT_MODE ("inline" or "outline"; anything else is
+// outline), and a flag always wins over it.
+func TestDecideOutputMode_Default(t *testing.T) {
+	for _, tt := range []struct {
+		inline, outline bool
+		def             string
+		want            int
+		wantErr         bool
+	}{
+		{false, false, "", commandline.OutputModeOutline, false},
+		{false, false, "inline", commandline.OutputModeInline, false},
+		{false, false, "outline", commandline.OutputModeOutline, false},
+		{false, false, "INLINE", commandline.OutputModeOutline, false},
+		{false, false, "bogus", commandline.OutputModeOutline, false},
+		{true, false, "outline", commandline.OutputModeInline, false},
+		{false, true, "inline", commandline.OutputModeOutline, false},
+		{true, true, "inline", -1, true},
+		{true, true, "outline", -1, true},
+	} {
+		cr := commandline.Option{InlineFlag: tt.inline, OutlineFlag: tt.outline, DefaultOutputMode: tt.def}
+		got, err := cr.DecideOutputMode()
+		if got != tt.want || (err != nil) != tt.wantErr {
+			t.Errorf("inline=%v outline=%v default=%q: got %d, %v; want %d, error %v", tt.inline, tt.outline, tt.def, got, err, tt.want, tt.wantErr)
+		}
+	}
+}
+
+// TestDecideJSONStr_ErrorMessages: the error texts (Go style: lower case,
+// no final punctuation) and the cause of a file read error.
+func TestDecideJSONStr_ErrorMessages(t *testing.T) {
+	cr := commandline.Option{Json: `{"a":`, PipeReader: failingPipeReader{t}}
+	if _, err := cr.DecideJSONStr(); err == nil || err.Error() != "your JSON string is corrupted" {
+		t.Errorf("corrupt JSON: got %v", err)
+	}
+
+	cr = commandline.Option{ForcePipeFlag: true, PipeReader: MockPipeReader{}}
+	if _, err := cr.DecideJSONStr(); err == nil || err.Error() != "nothing is coming through the pipe" {
+		t.Errorf("nothing piped: got %v", err)
+	}
+
+	missing := filepath.Join(t.TempDir(), "missing.json")
+	cr = commandline.Option{FilePath: missing, PipeReader: failingPipeReader{t}}
+	_, err := cr.DecideJSONStr()
+	if !errors.Is(err, fs.ErrNotExist) {
+		t.Errorf("missing file: got %v, want an error wrapping fs.ErrNotExist", err)
+	}
+	if err != nil && (!strings.HasPrefix(err.Error(), "could not read file: ") || !strings.Contains(err.Error(), missing)) {
+		t.Errorf("missing file: %q does not name the file and the cause", err)
 	}
 }
