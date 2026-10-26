@@ -45,7 +45,9 @@ jobs:
             || { echo "::error::tag $GITHUB_REF_NAME is not vMAJOR.MINOR.PATCH[-PRERELEASE]"; exit 1; }
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version-file: go.mod
+          # The release toolchain (builds[].env.GOTOOLCHAIN in hephaestus.yaml),
+          # as in the CI snapshot job: nothing is fetched through GOTOOLCHAIN.
+          go-version: "1.27.3"
           # Release binaries are built without restored caches.
           cache: false
       - name: Build, archive and checksum
@@ -86,7 +88,7 @@ jobs:
       # binaries without running them; nothing is built in this job.
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version-file: go.mod
+          go-version: "1.27.3"
           cache: false
       - name: Verify dist again before publishing anything
         # No binary is executed in this job (VERIFY_DIST_NO_EXEC).

@@ -97,6 +97,21 @@ The binaries are built with the Go toolchain pinned in `hephaestus.yaml`
 (`builds[].env.GOTOOLCHAIN`), whatever Go is installed; v1.2.8 was built with
 go1.24.2. `verify-dist.sh` checks the toolchain recorded in every binary.
 
+## Go versions
+
+| Where | Go | Set by |
+| --- | --- | --- |
+| Release binaries | the release toolchain (go1.27.3) | `builds[].env.GOTOOLCHAIN` in `hephaestus.yaml`, the only place it is written as a toolchain |
+| CI (`lint`, `test`, `race`, `snapshot`, `homebrew-e2e`) and `release.yml` | the release toolchain | `go-version` of each setup-go step |
+| `make` targets (local and CI) | the release toolchain | the Makefile reads `hephaestus.yaml` and exports `GOTOOLCHAIN`; the go command fetches that toolchain when the installed Go is older. `make GOTOOLCHAIN=local ...` uses the installed Go |
+| Oldest supported Go (`go install` users) | the `go` line of `go.mod` (1.24) | CI job `test-go-min` (setup-go `go-version-file: go.mod`, `GOTOOLCHAIN=local`) |
+
+`go.mod` has no `toolchain` line on purpose: it would make every
+`go install github.com/magicdrive/kirke@latest` fetch the release toolchain.
+`TestGoToolchainAlignment` checks that these stay in step. To move to a new
+release toolchain, change `GOTOOLCHAIN` in `hephaestus.yaml` and every
+`go-version` in the workflows together.
+
 `make snapshot` builds the same files locally (version `0.0.0-SNAPSHOT`).
 
 ## Homebrew formula
