@@ -48,7 +48,11 @@ func GoTypeForOutline(fieldName string, keyName string, value interface{}, withP
 		return "bool", ""
 	case []interface{}:
 		if len(v) > 0 {
-			elemType, nestedDef := GoTypeForOutline(fieldName+"Item", "", v[0],
+			elemType, representative, ok := scalarArrayElemType(v, nullTypeName)
+			if ok {
+				return "[]" + elemType, ""
+			}
+			elemType, nestedDef := GoTypeForOutline(fieldName+"Item", "", representative,
 				withPointer, numberStrings, boolFields, nullFields, nullTypeName)
 			return "[]" + elemType, nestedDef
 		}

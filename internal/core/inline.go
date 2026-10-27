@@ -55,8 +55,12 @@ func GoTypeForInline(fieldName string, keyName string, value interface{}, number
 		return "", generateInlineFields(nestedMap, nullTypeName)
 	case []interface{}:
 		if len(v) > 0 {
+			elemType, representative, ok := scalarArrayElemType(v, nullTypeName)
+			if ok {
+				return "[]" + elemType, ""
+			}
 			elemType, nestedFields := GoTypeForInline(fieldName+"Item", keyName,
-				v[0], numberStrings, boolFields, nullFields, nullTypeName)
+				representative, numberStrings, boolFields, nullFields, nullTypeName)
 			if nestedFields != "" {
 				return "[]struct {\n" + nestedFields + "\t}", ""
 			}
