@@ -88,6 +88,21 @@ Environment                         | Description                               
 `KIRKE_DEFAULT_POINTER_STRUCT_MODE` | Default of `--pointer-struct`. Only `on` and `off` are valid; other values are ignored.     | `off`
 `KIRKE_DEFAULT_AUTO_PAGER_MODE`     | Default of `--auto-pager`. Only `on` and `off` are valid; other values are ignored.         | `on`
 
+Number types
+------------
+
+JSON value                                                                                           | Go type
+---------------------------------------------------------------------------------------------------- | -------------
+integer that fits in int64 (`42`)                                                                     | `int`
+larger integer (`9223372036854775808`)                                                                | `*big.Int`
+exponent without a fraction within the float64 range (`1e3`, `1e-400`)                                | `float64`
+fraction that float64 holds as written (`1.5`, `1.0`, `1.2e-4`)                                       | `float64`
+fraction that float64 changes (`3.141592653589793238462643383279`, `1.5e400`), number beyond float64 (`1e400`) | `json.Number` (keeps the literal)
+array holding a number beyond float64                                                                 | `[]json.Number` (`[]*json.Number` with a null, `[]json.RawMessage` with other kinds of values)
+
+"float64 holds as written" means that the shortest decimal form of its float64 value, which `json.Marshal` writes, has the value of the JSON literal.
+The generated code uses `json.Number` and `json.RawMessage` (package `encoding/json`) and `*big.Int` (package `math/big`) without the import declarations.
+
 Examples
 --------
 
