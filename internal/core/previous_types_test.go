@@ -24,7 +24,8 @@ func TestApply_GoldenTypes(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		return string(b)
+		// A checkout on Windows may convert the line breaks to CRLF.
+		return strings.ReplaceAll(string(b), "\r\n", "\n")
 	}
 	for _, tc := range []struct {
 		name string
