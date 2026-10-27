@@ -96,8 +96,14 @@ func (o *OrderedMap) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+// decodeJSONArray decodes the JSON array b into result: an object as an
+// *OrderedMap, an array as a []interface{}, a number as a json.Number (its
+// literal: a number beyond float64 such as 1e400 does not fail, as it did
+// when numbers were decoded as float64), and a string, a boolean or null as
+// encoding/json decodes them.
 func decodeJSONArray(b json.RawMessage, result *[]interface{}) error {
 	dec := json.NewDecoder(bytes.NewReader(b))
+	dec.UseNumber()
 	if _, err := dec.Token(); err != nil {
 		return err
 	}
@@ -122,7 +128,9 @@ func decodeJSONArray(b json.RawMessage, result *[]interface{}) error {
 			}
 			item = nestedArray
 		} else {
-			if err := json.Unmarshal(rawItem, &item); err != nil {
+			itemDec := json.NewDecoder(bytes.NewReader(rawItem))
+			itemDec.UseNumber()
+			if err := itemDec.Decode(&item); err != nil {
 				return err
 			}
 		}
