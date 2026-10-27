@@ -1,0 +1,245 @@
+name: aqua E2E
+
+# Installs a published kirke release with aqua from the published
+# magicdrive/aqua-registry and runs it, on Linux, macOS and Windows runners:
+# download, checksum (aqua's require_checksum against kirke_checksums.txt),
+# unarchive, run (--version and a conversion), and a tampered checksum that
+# must make the install fail.
+#
+# It depends on GitHub releases and the registry repository, so it is not
+# part of CI (ci.yml) or its ci-gate: it runs on demand, and on a pull request
+# only when this file changes. Nothing here publishes or changes a release.
+
+on:
+  workflow_dispatch:
+    inputs:
+      kirke-version:
+        description: Published kirke release to install (tag).
+        required: false
+        default: v1.2.8
+      registry-ref:
+        description: Published magicdrive/aqua-registry tag (vX.Y.Z).
+        required: false
+        default: v1.1.0
+  pull_request:
+    paths:
+      - .github/workflows/aqua-e2e.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aqua-e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # The aqua release this test installs. Its archives are checked against
+  # the release's checksums file and against the sums pinned below (taken
+  # from aqua_2.64.0_checksums.txt; Linux and macOS match the pins in
+  # magicdrive/aqua-registry v1.1.0 ci/install-aqua.sh).
+  AQUA_VERSION: v2.64.0
+  KIRKE_VERSION: ${{ inputs.kirke-version || 'v1.2.8' }}
+  REGISTRY_REF: ${{ inputs.registry-ref || 'v1.1.0' }}
+
+jobs:
+  aqua-e2e:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash
+    env:
+      # Read-only token for aqua's GitHub API calls (registry, release
+      # assets); it avoids the anonymous rate limit.
+      GITHUB_TOKEN: ${{ github.token }}
+      AQUA_LOG_COLOR: never
+    steps:
+      - name: Install aqua ${{ env.AQUA_VERSION }} from its release (checksum verified)
+        run: |
+          set -euo pipefail
+          case "$RUNNER_OS" in
+            Linux) os=linux ext=tar.gz exe= ;;
+            macOS) os=darwin ext=tar.gz exe= ;;
+            Windows) os=windows ext=zip exe=.exe ;;
+            *) echo "::error::unsupported runner OS $RUNNER_OS"; exit 1 ;;
+          esac
+          case "$RUNNER_ARCH" in
+            X64) arch=amd64 ;;
+            ARM64) arch=arm64 ;;
+            *) echo "::error::unsupported runner arch $RUNNER_ARCH"; exit 1 ;;
+          esac
+          case "${os}_${arch}" in
+            darwin_amd64) pinned=64bc676871f2fe2683f57371e958963fc5a14b72b03e22b796fa228dcdeb353b ;;
+            darwin_arm64) pinned=f7f7890781bbd8863b04b61eb7bb40fe83add7097243c13da987ae9fb56d93b7 ;;
+            linux_amd64) pinned=b276e927ee2f4dc214831708c0843a91007bafa06f2f9fcd6ee1fd73fd165598 ;;
+            linux_arm64) pinned=7cc2b859333f40ef52eb62a1be3bfaa34dcbc27ef1c8bdc5bfaea7787597bc18 ;;
+            windows_amd64) pinned=7f8694f6181a01360633c27f8c9c4140d97f4b9d6fb244bad6b5bdfe8b2b7916 ;;
+            windows_arm64) pinned=7fe40a7a6b93cb4494700d39dcc01db9c59c22abd689890e71a6cf88290df3b7 ;;
+          esac
+          [[ "$AQUA_VERSION" == v2.64.0 ]] || { echo "::error::the pinned sums are for aqua v2.64.0"; exit 1; }
+
+          # One path form that bash and the native Windows programs both read.
+          work="$RUNNER_TEMP/aqua-e2e"
+          [[ "$RUNNER_OS" == Windows ]] && work="$(cygpath -m "$RUNNER_TEMP")/aqua-e2e"
+          mkdir -p "$work/dl" "$work/bin" "$work/proj" "$work/root"
+
+          asset="aqua_${os}_${arch}.${ext}"
+          base="https://github.com/aquaproj/aqua/releases/download/$AQUA_VERSION"
+          curl -fsSL --retry 3 -o "$work/dl/$asset" "$base/$asset"
+          curl -fsSL --retry 3 -o "$work/dl/checksums.txt" "$base/aqua_${AQUA_VERSION#v}_checksums.txt"
+          if command -v sha256sum >/dev/null; then actual="$(sha256sum "$work/dl/$asset" | cut -d' ' -f1)"
+          else actual="$(shasum -a 256 "$work/dl/$asset" | cut -d' ' -f1)"; fi
+          listed="$(awk -v a="$asset" '$2 == a { print $1 }' "$work/dl/checksums.txt")"
+          echo "$asset sha256=$actual listed=$listed pinned=$pinned"
+          [[ -n "$actual" && "$actual" == "$listed" && "$actual" == "$pinned" ]] \
+            || { echo "::error::aqua $asset checksum mismatch"; exit 1; }
+
+          if [[ "$ext" == zip ]] && command -v unzip >/dev/null; then
+            unzip -q -o "$work/dl/$asset" "aqua$exe" -d "$work/bin"
+          elif [[ "$ext" == zip ]]; then
+            7z x -y -o"$work/bin" "$work/dl/$asset" "aqua$exe" > /dev/null
+          else
+            tar -xzf "$work/dl/$asset" -C "$work/bin" aqua
+          fi
+          "$work/bin/aqua$exe" version
+          {
+            echo "WORK=$work"
+            echo "OS=$os"
+            echo "ARCH=$arch"
+            echo "EXE=$exe"
+            echo "AQUA=$work/bin/aqua$exe"
+            echo "AQUA_ROOT_DIR=$work/root"
+            echo "AQUA_CONFIG=$work/proj/aqua.yaml"
+            echo "AQUA_POLICY_CONFIG=$work/proj/aqua-policy.yaml"
+            echo "AQUA_GLOBAL_CONFIG="
+          } >> "$GITHUB_ENV"
+
+      - name: Configure kirke ${{ env.KIRKE_VERSION }} from magicdrive/aqua-registry ${{ env.REGISTRY_REF }}
+        run: |
+          set -euo pipefail
+          [[ "$REGISTRY_REF" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] \
+            || { echo "::error::registry-ref must be a vX.Y.Z tag: $REGISTRY_REF"; exit 1; }
+          [[ "$KIRKE_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] \
+            || { echo "::error::kirke-version must be a vX.Y.Z tag: $KIRKE_VERSION"; exit 1; }
+          cat > "$AQUA_CONFIG" <<YAML
+          checksum:
+            enabled: true
+            require_checksum: true
+          registries:
+            - name: magicdrive
+              type: github_content
+              repo_owner: magicdrive
+              repo_name: aqua-registry
+              ref: $REGISTRY_REF
+              path: registry.yaml
+          packages:
+            - name: magicdrive/kirke@$KIRKE_VERSION
+              registry: magicdrive
+          YAML
+          # A registry other than the standard one needs a policy allowing it.
+          cat > "$AQUA_POLICY_CONFIG" <<YAML
+          registries:
+            - name: magicdrive
+              type: github_content
+              repo_owner: magicdrive
+              repo_name: aqua-registry
+              ref: semver("= ${REGISTRY_REF#v}")
+              path: registry.yaml
+          packages:
+            - registry: magicdrive
+          YAML
+          cat "$AQUA_CONFIG" "$AQUA_POLICY_CONFIG"
+
+      - name: Record the checksum and install (download, checksum, unarchive)
+        working-directory: ${{ env.WORK }}/proj
+        run: |
+          set -euo pipefail
+          # aqua downloads kirke_checksums.txt of the release and records the
+          # sha256 of this platform's archive in aqua-checksums.json; with
+          # require_checksum the install fails without a matching entry.
+          "$AQUA" update-checksum
+          cat aqua-checksums.json
+          AQUA_LOG_LEVEL=debug "$AQUA" install --all > "$WORK/install.log" 2>&1 \
+            || { cat "$WORK/install.log"; exit 1; }
+          grep -Ei 'kirke' "$WORK/install.log" | grep -Ei 'download|checksum|unarchive|url|error|warn' || true
+
+      - name: The recorded checksum is the one the kirke release publishes
+        working-directory: ${{ env.WORK }}/proj
+        run: |
+          set -euo pipefail
+          want="kirke_${KIRKE_VERSION#v}_${OS}_${ARCH}.tar.gz"
+          base="https://github.com/magicdrive/kirke/releases/download/$KIRKE_VERSION"
+          curl -fsSL --retry 3 -o "$WORK/dl/kirke_checksums.txt" "$base/kirke_checksums.txt"
+          listed="$(awk -v a="$want" '$2 == a { print $1 }' "$WORK/dl/kirke_checksums.txt")"
+          [[ "$listed" =~ ^[0-9a-f]{64}$ ]] || { echo "::error::$want not in kirke_checksums.txt"; exit 1; }
+          # The archive itself, downloaded again, has that sum.
+          curl -fsSL --retry 3 -o "$WORK/dl/$want" "$base/$want"
+          if command -v sha256sum >/dev/null; then actual="$(sha256sum "$WORK/dl/$want" | cut -d' ' -f1)"
+          else actual="$(shasum -a 256 "$WORK/dl/$want" | cut -d' ' -f1)"; fi
+          echo "$want listed=$listed actual=$actual"
+          [[ "$actual" == "$listed" ]] || { echo "::error::$want does not match kirke_checksums.txt"; exit 1; }
+          grep -q "$want" aqua-checksums.json || { echo "::error::aqua-checksums.json has no entry for $want"; exit 1; }
+          grep -qi "\"checksum\": *\"$listed\"" aqua-checksums.json \
+            || { echo "::error::aqua-checksums.json does not record $listed"; exit 1; }
+          echo "aqua recorded $want with sha256 $listed"
+
+      - name: Run the installed kirke (--version, conversion)
+        working-directory: ${{ env.WORK }}/proj
+        run: |
+          set -euo pipefail
+          norm() { if [[ "$RUNNER_OS" == Windows ]]; then cygpath -m "$1"; else printf '%s\n' "$1"; fi; }
+          bin="$(norm "$("$AQUA" which kirke | tr -d '\r')")"
+          echo "aqua which kirke: $bin"
+          case "$bin" in
+            "$(norm "$AQUA_ROOT_DIR")"/pkgs/*"/kirke$EXE") ;;
+            *) echo "::error::kirke is not the binary unarchived under AQUA_ROOT_DIR/pkgs"; exit 1 ;;
+          esac
+          check() {
+            local out
+            out="$("$@" --version | tr -d '\r')"
+            echo "$* --version: $out"
+            [[ "$out" == "kirke version $KIRKE_VERSION" ]] || { echo "::error::unexpected version: $out"; exit 1; }
+            out="$(printf '{"name":"kirke","n":1}\n' | "$@" --pipe --auto-pager off | tr -d '\r')"
+            echo "$out"
+            grep -q '^type AutoGenerated struct {' <<<"$out" || { echo "::error::conversion failed"; exit 1; }
+            grep -Eq '^[[:space:]]+N[[:space:]]+int[[:space:]]+.json:"n".$' <<<"$out" || { echo "::error::conversion failed"; exit 1; }
+          }
+          # The unarchived binary itself, through aqua exec, and through the
+          # command aqua puts in AQUA_ROOT_DIR/bin (how users run it).
+          check "$bin"
+          check "$AQUA" exec -- kirke
+          ls -l "$AQUA_ROOT_DIR/bin"
+          if [[ "$RUNNER_OS" == Windows ]]; then
+            PATH="$(cygpath -u "$AQUA_ROOT_DIR")/bin:$(cygpath -u "$WORK")/bin:$PATH"
+          else
+            PATH="$AQUA_ROOT_DIR/bin:$WORK/bin:$PATH"
+          fi
+          export PATH
+          echo "kirke on PATH: $(command -v kirke)"
+          check kirke
+
+      - name: A tampered checksum makes the install fail
+        working-directory: ${{ env.WORK }}/proj
+        run: |
+          set -euo pipefail
+          listed="$(awk -v a="kirke_${KIRKE_VERSION#v}_${OS}_${ARCH}.tar.gz" '$2 == a { print $1 }' "$WORK/dl/kirke_checksums.txt")"
+          rm -rf "$AQUA_ROOT_DIR/pkgs"
+          cp aqua-checksums.json "$WORK/aqua-checksums.json.good"
+          zeros="$(printf '%064d' 0)"
+          # aqua records upper-case hex; BSD sed (macOS) has no I flag.
+          upper="$(tr 'a-f' 'A-F' <<<"$listed")"
+          sed -i.bak -e "s/$listed/$zeros/" -e "s/$upper/$zeros/" aqua-checksums.json
+          grep -qi "$zeros" aqua-checksums.json || { echo "::error::tampering did not apply"; exit 1; }
+          if "$AQUA" install --all > "$WORK/tamper.log" 2>&1; then
+            cat "$WORK/tamper.log"; echo "::error::the install accepted a tampered checksum"; exit 1
+          fi
+          if "$AQUA" exec -- kirke --version > "$WORK/tamper-exec.log" 2>&1; then
+            cat "$WORK/tamper-exec.log"; echo "::error::aqua exec ran kirke with a tampered checksum"; exit 1
+          fi
+          grep -i checksum "$WORK/tamper.log" || { cat "$WORK/tamper.log"; echo "::error::the failure is not a checksum error"; exit 1; }
+          cp "$WORK/aqua-checksums.json.good" aqua-checksums.json
+          echo "aqua E2E ($OS/$ARCH, kirke $KIRKE_VERSION, aqua-registry $REGISTRY_REF): OK"
