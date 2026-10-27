@@ -143,3 +143,27 @@ func TestOptParse_WithEnviroments(t *testing.T) {
 	// Compare only the relevant fields
 	compareOptions(t, expected, result)
 }
+
+// TestOptParse_OnOffSwitchCase: --pointer-struct and --auto-pager accept
+// on and off in any case, and then act on them (the value used to be kept
+// as typed, so --pointer ON was accepted but compared unequal to "on").
+func TestOptParse_OnOffSwitchCase(t *testing.T) {
+	for _, tc := range []struct {
+		pointer, pager         string
+		wantPointer, wantPager string
+	}{
+		{"ON", "OFF", "on", "off"},
+		{"On", "Off", "on", "off"},
+		{"oFF", "oN", "off", "on"},
+		{"on", "off", "on", "off"},
+	} {
+		_, opt, err := commandline.OptParse([]string{"--pointer-struct", tc.pointer, "--auto-pager", tc.pager})
+		if err != nil {
+			t.Fatalf("%v: %v", tc, err)
+		}
+		if opt.PointerStructMode != tc.wantPointer || opt.AutoPagerMode != tc.wantPager {
+			t.Errorf("--pointer-struct %s --auto-pager %s: got %q, %q; want %q, %q",
+				tc.pointer, tc.pager, opt.PointerStructMode, opt.AutoPagerMode, tc.wantPointer, tc.wantPager)
+		}
+	}
+}
