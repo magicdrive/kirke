@@ -13,9 +13,9 @@ const (
 type OnOffSwitch string
 
 func (m *OnOffSwitch) Set(value string) error {
-	switch strings.ToLower(value) {
-	case "on", "off":
-		*m = OnOffSwitch(value)
+	switch v := strings.ToLower(value); v {
+	case SwitchOn, SwitchOff:
+		*m = OnOffSwitch(v)
 		return nil
 	default:
 		return fmt.Errorf("invalid value: %s. Allowed values are 'on', 'off'", value)
