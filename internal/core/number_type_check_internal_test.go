@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math/big"
 	"reflect"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -41,30 +40,29 @@ func TestParseNumber(t *testing.T) {
 }
 
 // TestParseNumber_Exponent pins the type of JSON numbers with an exponent
-// part. Without a fraction: float64 when strconv.ParseFloat parses it
-// without a range error (an underflow included, unchanged), json.Number
-// beyond float64 (was interface{}, which json.Unmarshal rejects). With a
-// fraction: float64 or json.Number instead of *big.Float.
+// part: float64 when float64 holds the value as written, json.Number when
+// it does not (overflow, underflow, digits float64 rounds away).
 func TestParseNumber_Exponent(t *testing.T) {
 	for in, want := range map[string]string{
-		"1e3":                    "float64",
-		"1E3":                    "float64",
-		"1e+3":                   "float64",
-		"-2e+5":                  "float64",
-		"0e0":                    "float64",
-		"-0e0":                   "float64",
-		"1e5":                    "float64",
-		"1e21":                   "float64",
-		"1e0003":                 "float64", // leading zeros in the exponent are valid JSON
-		"5e-324":                 "float64", // smallest subnormal
-		"1e-400":                 "float64", // underflows to 0, as encoding/json decodes it
-		"12345678901234567890e0": "float64", // rounded, as encoding/json decodes it
-		"1e308":                  "float64",
-		"1e309":                  "json.Number", // overflows float64
-		"1e400":                  "json.Number",
-		"-1e400":                 "json.Number",
-		"1e999999999999":         "json.Number",
-		"1e99999999999999999999": "json.Number",
+		"1e3":                      "float64",
+		"1E3":                      "float64",
+		"1e+3":                     "float64",
+		"-2e+5":                    "float64",
+		"0e0":                      "float64",
+		"-0e0":                     "float64",
+		"1e5":                      "float64",
+		"1e21":                     "float64",
+		"1e0003":                   "float64",     // leading zeros in the exponent are valid JSON
+		"5e-324":                   "float64",     // smallest subnormal
+		"1e-400":                   "json.Number", // float64 underflows it to 0 (was float64)
+		"-1e-99999999999999999999": "json.Number",
+		"12345678901234567890e0":   "json.Number", // float64 rounds it (was float64)
+		"1e308":                    "float64",
+		"1e309":                    "json.Number", // overflows float64
+		"1e400":                    "json.Number",
+		"-1e400":                   "json.Number",
+		"1e999999999999":           "json.Number",
+		"1e99999999999999999999":   "json.Number",
 		// With a fraction: float64 when float64 holds the value as written,
 		// json.Number otherwise (was *big.Float).
 		"1.2e-4":                    "float64",
@@ -73,7 +71,7 @@ func TestParseNumber_Exponent(t *testing.T) {
 		"1.5e400":                   "json.Number",
 		"2.5e-400":                  "json.Number",
 		"1.5e99999999999999999999":  "json.Number", // was interface{}: beyond float64
-		"1.5e-99999999999999999999": "interface{}", // unchanged: decodes as 0
+		"1.5e-99999999999999999999": "json.Number", // was interface{}: decoded as 0
 	} {
 		if got := parseNumber(json.Number(in)); got != want {
 			t.Errorf("parseNumber(%s) = %s, want %s", in, got, want)
@@ -119,60 +117,48 @@ func legacyParseNumber(num json.Number) string {
 }
 
 // FuzzParseNumber checks, for any input, that parseNumber returns a known
-// type and differs from the previous behavior (previousParseNumber) only
-// where that type never decoded the literal: *big.Float became float64 when
-// float64 holds the value as written, json.Number otherwise, and
-// interface{} beyond float64 became json.Number. For every JSON number,
-// json.Unmarshal (no UseNumber) decodes the literal into the type, and a
-// json.Number or a float64 that was *big.Float encodes back with its value.
+// type, interface{} only for what is not a JSON number; and for every JSON
+// number, that json.Unmarshal (no UseNumber) decodes the literal into the
+// type and json.Marshal encodes it back to a number of the same value.
 func FuzzParseNumber(f *testing.F) {
 	for _, s := range fuzzNumberSeeds {
 		f.Add(s)
 	}
 	f.Fuzz(func(t *testing.T, s string) {
 		got := parseNumber(json.Number(s))
+		valid := jsonNumberGrammar.MatchString(s)
 		switch got {
-		case "int", "float64", "*big.Int", "json.Number", "interface{}":
+		case "int", "float64", "*big.Int", "json.Number":
+			if !valid {
+				t.Fatalf("parseNumber(%q) = %s for what is not a JSON number", s, got)
+			}
+		case "interface{}":
+			if valid {
+				t.Fatalf("parseNumber(%q) = interface{} for a JSON number", s)
+			}
+			return
 		default:
 			t.Fatalf("parseNumber(%q) = %q, not a known type", s, got)
 		}
-		valid := jsonNumberGrammar.MatchString(s)
-		prev := previousParseNumber(json.Number(s))
-		switch {
-		case got == prev:
-		case prev == "*big.Float" && !valid && got == "interface{}":
-			// Not a JSON number: the decoder never produces one.
-		case prev == "*big.Float" && valid && (got == "float64") == float64Exact(s) && (got == "float64" || got == "json.Number"):
-		case prev == "interface{}" && valid && got == "json.Number":
-			if _, err := strconv.ParseFloat(s, 64); err == nil {
-				t.Fatalf("parseNumber(%q) = json.Number, was interface{}, which decodes it", s)
-			}
-		default:
-			t.Fatalf("parseNumber(%q) = %s, was %s", s, got, prev)
+		if strings.ContainsAny(s, ".eE") && (got == "int" || got == "*big.Int") {
+			t.Fatalf("parseNumber(%q) = %s for a literal with a fraction or an exponent", s, got)
 		}
-		if !valid {
-			return
-		}
-		if strings.ContainsAny(s, "eE") && (got == "int" || got == "*big.Int") {
-			t.Fatalf("parseNumber(%q) = %s for a literal with an exponent", s, got)
-		}
-		out, err := decodeAndEncode(got, `{"N":`+s+`}`)
+		doc := `{"N":` + s + `}`
+		out, err := decodeAndEncode(got, doc)
 		if err != nil {
 			t.Fatalf("parseNumber(%q) = %s, but encoding/json cannot decode it into one: %v", s, got, err)
 		}
-		if got == "json.Number" || prev == "*big.Float" {
-			var back struct{ N json.RawMessage }
-			if err := json.Unmarshal(out, &back); err != nil || !sameDecimal(s, string(back.N)) {
-				t.Fatalf("parseNumber(%q) = %s encodes back as %s", s, got, out)
-			}
+		if err := sameNumbers(doc, string(out)); err != nil {
+			t.Fatalf("parseNumber(%q) = %s encodes back as %s: %v", s, got, out, err)
 		}
 	})
 }
 
 // FuzzApply_Numbers checks that a JSON number decodes with json.Unmarshal
-// (no UseNumber) into the type kirke generates for it, in both output
-// modes, as an object field, alone in an array, after another number and
-// after or before a null.
+// (no UseNumber) into the type kirke generates for it and json.Marshal
+// encodes it back with its value (and null as null), in both output modes,
+// as an object field, alone in an array, after another number and after
+// or before a null.
 func FuzzApply_Numbers(f *testing.F) {
 	for i, s := range fuzzNumberSeeds {
 		f.Add(s, fuzzNumberSeeds[(i+7)%len(fuzzNumberSeeds)])
@@ -198,8 +184,13 @@ func FuzzApply_Numbers(f *testing.F) {
 				if err := json.Unmarshal([]byte(doc), &raw); err != nil {
 					t.Fatal(err)
 				}
-				if _, err := decodeAndEncode(typ, `{"N":`+string(raw[key])+`}`); err != nil {
+				in := `{"N":` + string(raw[key]) + `}`
+				out, err := decodeAndEncode(typ, in)
+				if err != nil {
 					t.Fatalf("mode %d: %s: field %s %s does not decode it: %v\n%s", mode, doc, key, typ, err, src)
+				}
+				if err := sameNumbers(in, string(out)); err != nil {
+					t.Fatalf("mode %d: %s: field %s %s encodes back as %s: %v\n%s", mode, doc, key, typ, out, err, src)
 				}
 			}
 		}
@@ -265,25 +256,73 @@ func goType(typ string) (reflect.Type, error) {
 	return nil, fmt.Errorf("unknown type %s", typ)
 }
 
-// previousParseNumber is parseNumber before *big.Float and interface{}
-// beyond float64 were replaced (kirke d819f82): the reference for every
-// type that did decode.
-func previousParseNumber(num json.Number) string {
-	if jsonExponentInteger.MatchString(num.String()) {
-		if _, err := strconv.ParseFloat(num.String(), 64); err != nil {
-			return "interface{}"
-		}
-		return "float64"
+// sameNumbers reports how the JSON documents a and b differ: numbers are
+// compared by value (sameDecimal), the rest exactly.
+func sameNumbers(a, b string) error {
+	decode := func(s string) (interface{}, error) {
+		dec := json.NewDecoder(strings.NewReader(s))
+		dec.UseNumber()
+		var v interface{}
+		return v, dec.Decode(&v)
 	}
-	return legacyParseNumber(num)
+	av, err := decode(a)
+	if err != nil {
+		return err
+	}
+	bv, err := decode(b)
+	if err != nil {
+		return err
+	}
+	var same func(a, b interface{}) bool
+	same = func(a, b interface{}) bool {
+		switch a := a.(type) {
+		case map[string]interface{}:
+			b, ok := b.(map[string]interface{})
+			if !ok || len(a) != len(b) {
+				return false
+			}
+			for k := range a {
+				if !same(a[k], b[k]) {
+					return false
+				}
+			}
+			return true
+		case []interface{}:
+			b, ok := b.([]interface{})
+			if !ok || len(a) != len(b) {
+				return false
+			}
+			for i := range a {
+				if !same(a[i], b[i]) {
+					return false
+				}
+			}
+			return true
+		case json.Number:
+			b, ok := b.(json.Number)
+			return ok && sameDecimal(a.String(), b.String())
+		default:
+			return reflect.DeepEqual(a, b)
+		}
+	}
+	if !same(av, bv) {
+		return fmt.Errorf("%s is not %s", b, a)
+	}
+	return nil
 }
 
 // TestApply_NumberTypes checks the number types through the decoder, in
-// both output modes: no *big.Float, json.Number beyond float64.
+// both output modes, for object fields and array elements: float64 when it
+// holds the value as written, json.Number otherwise; arrays typed from all
+// of their elements, a pointer element with a null.
 func TestApply_NumberTypes(t *testing.T) {
 	in := `{"i": 1, "bi": 9223372036854775808, "f": 1.5, "bf": 1.0,` +
 		` "e": 1e3, "eu": 1E3, "ef": 1.2e-4, "en": -2e+5, "ez": 0e0, "ec": 1e+21,` +
-		` "o": 1e400, "u": 1e-400, "nested": {"e": 1e5}}`
+		` "o": 1e400, "u": 1e-400, "pi": 3.141592653589793238462643383279, "nested": {"e": 1e5},` +
+		` "ai": [1, 2], "af": [1, 2.5], "abi": [1, 9223372036854775808], "an": [0.1, 1e400],` +
+		` "ani": [1, null], "anf": [null, 1.0], "ann": [1e400, null], "anbi": [null, 9223372036854775808],` +
+		` "anull": [null], "amix": [1, "a"], "amixu": [1e-400, true], "anest": [[1.0, 2]],` +
+		` "aobj": [null, {"x": 1.0}]}`
 	want := []string{
 		"I int `json:\"i\"`",
 		"Bi *big.Int `json:\"bi\"`",
@@ -296,7 +335,21 @@ func TestApply_NumberTypes(t *testing.T) {
 		"Ez float64 `json:\"ez\"`",
 		"Ec float64 `json:\"ec\"`",
 		"O json.Number `json:\"o\"`",
-		"U float64 `json:\"u\"`",
+		"U json.Number `json:\"u\"`",
+		"Pi json.Number `json:\"pi\"`",
+		"Ai []int `json:\"ai\"`",
+		"Af []float64 `json:\"af\"`",
+		"Abi []*big.Int `json:\"abi\"`",
+		"An []json.Number `json:\"an\"`",
+		"Ani []*int `json:\"ani\"`",
+		"Anf []*float64 `json:\"anf\"`",
+		"Ann []*json.Number `json:\"ann\"`",
+		"Anbi []*big.Int `json:\"anbi\"`",
+		"Anull []any `json:\"anull\"`",
+		"Amix []interface{} `json:\"amix\"`",
+		"Amixu []json.RawMessage `json:\"amixu\"`",
+		"Anest [][]float64 `json:\"anest\"`",
+		"X float64 `json:\"x\"`",
 	}
 	for _, mode := range []int{commandline.OutputModeOutline, commandline.OutputModeInline} {
 		out, err := Apply(in, "Root", mode, false, "any")

@@ -56,9 +56,8 @@ func main() {
 
 // TestGeneratedStruct_Unmarshal: JSON numbers with an exponent (1e3, 1E3,
 // -2e+5, 0e0, 1e21, an underflow, nested, in an array element) decode
-// into the struct generated for them with json.Unmarshal; a number beyond
-// float64 (json.Number) decodes with it and with a json.Decoder using
-// UseNumber.
+// into the struct generated for them with json.Unmarshal, and so does a
+// number beyond float64 (json.Number); the underflow keeps its value.
 func TestGeneratedStruct_Unmarshal(t *testing.T) {
 	if testing.Short() {
 		t.Skip("builds Go programs")
@@ -72,12 +71,12 @@ func TestGeneratedStruct_Unmarshal(t *testing.T) {
 			json: `{"a": 1e3, "b": 1E3, "c": -2e+5, "d": 0e0, "e": 1e21, "f": 1e-400,` +
 				` "g": 5e-324, "i": 1, "x": 1.5, "s": "str", "n": {"e": 1e5}, "l": [{"e": 2e2}]}`,
 			decode: "unmarshal",
-			want:   []string{`"a":1000`, `"b":1000`, `"c":-200000`, `"d":0`, `"e":1e+21`, `"f":0`, `"g":5e-324`, `"e":100000`, `"e":200`},
+			want:   []string{`"a":1000`, `"b":1000`, `"c":-200000`, `"d":0`, `"e":1e+21`, `"f":1e-400`, `"g":5e-324`, `"e":100000`, `"e":200`},
 		},
 		{
 			name:   "overflow",
 			json:   `{"a": 1e400, "b": -1e309, "i": 2}`,
-			decode: "usenumber",
+			decode: "unmarshal",
 			want:   []string{`"a":1e400`, `"b":-1e309`, `"i":2`},
 		},
 	} {

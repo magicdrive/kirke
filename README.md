@@ -88,19 +88,24 @@ Environment                         | Description                               
 `KIRKE_DEFAULT_POINTER_STRUCT_MODE` | Default of `--pointer-struct`. Only `on` and `off` are valid; other values are ignored.     | `off`
 `KIRKE_DEFAULT_AUTO_PAGER_MODE`     | Default of `--auto-pager`. Only `on` and `off` are valid; other values are ignored.         | `on`
 
-Number types
-------------
+Types
+-----
 
-JSON value                                                                                           | Go type
----------------------------------------------------------------------------------------------------- | -------------
-integer that fits in int64 (`42`)                                                                     | `int`
-larger integer (`9223372036854775808`)                                                                | `*big.Int`
-exponent without a fraction within the float64 range (`1e3`, `1e-400`)                                | `float64`
-fraction that float64 holds as written (`1.5`, `1.0`, `1.2e-4`)                                       | `float64`
-fraction that float64 changes (`3.141592653589793238462643383279`, `1.5e400`), number beyond float64 (`1e400`) | `json.Number` (keeps the literal)
-array holding a number beyond float64                                                                 | `[]json.Number` (`[]*json.Number` with a null, `[]json.RawMessage` with other kinds of values)
+Every JSON value is typed so that `json.Unmarshal` decodes it into the generated struct and `json.Marshal` encodes it back with the same value.
 
-"float64 holds as written" means that the shortest decimal form of its float64 value, which `json.Marshal` writes, has the value of the JSON literal.
+JSON value                                                      | Go type
+--------------------------------------------------------------- | ------------------------------------------------
+string, `true`/`false`                                          | `string`, `bool`
+`null`                                                          | `<null-type-name>` (`any`)
+object                                                          | a struct (a pointer with `--pointer-struct on`, outline only)
+integer that fits in int64 (`42`, `-0`)                         | `int`
+larger integer (`9223372036854775808`)                          | `*big.Int`
+fraction or exponent that float64 holds as written (`1.5`, `1.0`, `0.1`, `1e3`, `1.2e-4`) | `float64`
+fraction or exponent that float64 changes (`3.141592653589793238462643383279`, `1e400`, `1e-400`) | `json.Number` (keeps the literal)
+array                                                           | a slice of the type of all its elements: `[1, 2.5]` is `[]float64`, `[1, null]` is `[]*int`, `[{...}, null]` is a slice of struct pointers, `[1, "a"]` is `[]interface{}` (`[]json.RawMessage` with a number float64 changes), `[null]` is `[]<null-type-name>`
+
+"float64 holds as written" means that the shortest decimal form of its float64 value, which `json.Marshal` writes, has the value of the JSON literal (`1.0` is written `1`, `0.1` stays `0.1`).
+The array elements that are objects or arrays are typed from the first of them that is not null.
 The generated code uses `json.Number` and `json.RawMessage` (package `encoding/json`) and `*big.Int` (package `math/big`) without the import declarations.
 
 Examples

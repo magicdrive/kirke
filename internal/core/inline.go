@@ -55,55 +55,20 @@ func GoTypeForInline(fieldName string, keyName string, value interface{}, number
 		return "", generateInlineFields(nestedMap, nullTypeName)
 	case []interface{}:
 		if len(v) > 0 {
-			if elemType, ok := overflowArrayElemType(v); ok {
+			elemType, representative, hasNull, ok := scalarArrayElemType(v, nullTypeName)
+			if ok {
 				return "[]" + elemType, ""
 			}
-			if v[0] == nil {
-				// kirke used to panic here (reflect has no type for nil).
-				return "[]" + nullableInlineElemType(fieldName, keyName, v, numberStrings,
-					boolFields, nullFields, nullTypeName), ""
-			}
-			if _, ok := v[0].(json.Number); ok {
-				// Array numbers used to be decoded as float64; they keep
-				// that type.
-				return "[]float64", ""
-			}
 			elemType, nestedFields := GoTypeForInline(fieldName+"Item", keyName,
-				v[0], numberStrings, boolFields, nullFields, nullTypeName)
+				representative, numberStrings, boolFields, nullFields, nullTypeName)
 			if nestedFields != "" {
-				return "[]struct {\n" + nestedFields + "\t}", ""
+				return "[]" + nullableElem("struct {\n"+nestedFields+"\t}", hasNull), ""
 			}
-			return "[]" + elemType, ""
+			return "[]" + nullableElem(elemType, hasNull), ""
 		}
 		return "[]" + nullTypeName, ""
 	default:
 		return reflect.TypeOf(value).String(), ""
-	}
-}
-
-// nullableInlineElemType returns the element type of an array whose first
-// element is null: interface{} when every element is (as in outline
-// mode), else a pointer to the type of the first element that is not null
-// (*float64 for a number), so null decodes to nil and encodes back to null;
-// an array element stays a slice, which null already decodes to nil.
-func nullableInlineElemType(fieldName string, keyName string, values []interface{}, numberStrings map[string]string,
-	boolFields map[string]bool, nullFields map[string]string, nullTypeName string) string {
-	first := firstNonNull(values)
-	if first == nil {
-		return "interface{}"
-	}
-	if _, ok := first.(json.Number); ok {
-		return "*float64"
-	}
-	elemType, nestedFields := GoTypeForInline(fieldName+"Item", keyName,
-		first, numberStrings, boolFields, nullFields, nullTypeName)
-	switch {
-	case nestedFields != "":
-		return "*struct {\n" + nestedFields + "\t}"
-	case strings.HasPrefix(elemType, "[]"):
-		return elemType
-	default:
-		return "*" + elemType
 	}
 }
 

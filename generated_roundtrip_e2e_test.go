@@ -58,9 +58,57 @@ func TestGeneratedStruct_NumberRoundTrip(t *testing.T) {
 			name: "arrays starting with null, inline panicked",
 			json: `{"num": [null, 1, 2.5], "obj": [null, {"x": 1.0}], "str": [null, "a"], "arr": [null, [1]],` +
 				` "nulls": [null, null]}`,
-			fields: []string{"Num []*float64", "Obj []*struct", "Str []*string", "Arr [][]float64",
-				"Nulls []interface{}"},
+			fields: []string{"Num []*float64", "Obj []*struct", "Str []*string", "Arr [][]int",
+				"Nulls []any"},
 			inline: true,
+		},
+		// Contract changes: values float64 changes become json.Number, arrays
+		// are typed from all of their elements.
+		{
+			name: "integers",
+			json: `{"int": 42, "zero": 0, "neg": -7, "negzero": -0, "maxint": 9223372036854775807,` +
+				` "minint": -9223372036854775808, "bigint": 123456789012345678901234567890,` +
+				` "negbigint": -9223372036854775809}`,
+			fields: []string{"Int int", "Zero int", "Maxint int", "Bigint *big.Int", "Negbigint *big.Int"},
+		},
+		{
+			name: "fractions",
+			json: `{"frac": 1.5, "tenth": 0.1, "negfrac": -0.25, "fraczero": 0.0,` +
+				` "small": 0.000000000000000000000000000001, "underflow": 1.5e-99999999999999999999}`,
+			fields: []string{"Frac float64", "Tenth float64", "Fraczero float64", "Small float64",
+				"Underflow json.Number"},
+		},
+		{
+			name: "exponents float64 changes",
+			json: `{"exp": 1e3, "negexp": -2.5E+10, "tiny": 5e-324, "max": 1.7976931348623157e308,` +
+				` "underflow": 1e-400, "negunderflow": -1e-99999999999999999999, "inexact": 12345678901234567890e0}`,
+			fields: []string{"Exp float64", "Negexp float64", "Tiny float64", "Max float64",
+				"Underflow json.Number", "Negunderflow json.Number", "Inexact json.Number"},
+		},
+		{
+			name: "arrays from all elements",
+			json: `{"ints": [1, 2, 3], "nums": [1, 2.5, -3e2], "bigints": [1, 9223372036854775808],` +
+				` "lossy": [0.1, 3.141592653589793238462643383279], "under": [1e-400, 1],` +
+				` "inexactint": [9007199254740993, 0.5], "matrix": [[1, 2], [3]], "fmatrix": [[1.0], [2.5]]}`,
+			fields: []string{"Ints []int", "Nums []float64", "Bigints []*big.Int", "Lossy []json.Number",
+				"Under []json.Number", "Inexactint []json.Number", "Matrix [][]int", "Fmatrix [][]float64"},
+		},
+		{
+			name: "nullable",
+			json: `{"ints": [1, null, 3], "floats": [null, 1.5], "far": [null, 1e400],` +
+				` "bigints": [9223372036854775808, null], "strs": ["a", null], "bools": [true, null],` +
+				` "nulls": [null], "null": null, "objs": [{"x": 1}, null], "arrs": [[1], null]}`,
+			fields: []string{"Ints []*int", "Floats []*float64", "Far []*json.Number",
+				"Bigints []*big.Int", "Strs []*string", "Bools []*bool", "Nulls []any", "Null any",
+				"Arrs [][]int"},
+		},
+		{
+			name: "nested and mixed",
+			json: `{"nested": {"x": 1.0, "deep": {"y": 1e400, "z": [2.5, null]}},` +
+				` "objs": [{"v": 1.0, "w": 1e400}, {"v": 2.0, "w": 3}], "mixed": [1, "a", true, null],` +
+				` "mixedlossy": [1e-400, "a"], "s": "str", "b": true}`,
+			fields: []string{"X float64", "Y json.Number", "Z []*float64", "V float64", "W json.Number",
+				"Mixed []interface{}", "Mixedlossy []json.RawMessage"},
 		},
 	} {
 		for _, mode := range []int{commandline.OutputModeOutline, commandline.OutputModeInline} {
