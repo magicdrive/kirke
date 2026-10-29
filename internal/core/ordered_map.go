@@ -44,7 +44,18 @@ func (o *OrderedMap) UnmarshalJSON(b []byte) error {
 		if !ok {
 			return fmt.Errorf("expected string for key, but got %v", keyTok)
 		}
-		o.Keys = append(o.Keys, key)
+		// A key that appears again is one field, typed from all of its
+		// values (encoding/json decodes each of them into it); it was a
+		// second field of the same name, which did not compile.
+		var earlier mergedValues
+		if prev, seen := o.Map[key]; seen {
+			earlier = o.fieldValues(key, prev)
+			delete(o.NumberStrings, key)
+			delete(o.BoolFields, key)
+			delete(o.NullFields, key)
+		} else {
+			o.Keys = append(o.Keys, key)
+		}
 
 		var raw json.RawMessage
 		if err := dec.Decode(&raw); err != nil {
@@ -83,6 +94,13 @@ func (o *OrderedMap) UnmarshalJSON(b []byte) error {
 			o.NumberStrings[key] = rawStr
 			o.Map[key] = json.Number(rawStr)
 		}
+		if earlier != nil {
+			value := o.fieldValues(key, o.Map[key])
+			delete(o.NumberStrings, key)
+			delete(o.BoolFields, key)
+			delete(o.NullFields, key)
+			o.Map[key] = append(earlier, value...)
+		}
 	}
 
 	tok, err = dec.Token()
@@ -94,6 +112,18 @@ func (o *OrderedMap) UnmarshalJSON(b []byte) error {
 	}
 
 	return nil
+}
+
+// fieldValues returns the values the field key holds: those of a key that
+// appears more than once, or its value (nil for null).
+func (o *OrderedMap) fieldValues(key string, value interface{}) mergedValues {
+	if v, ok := value.(mergedValues); ok {
+		return v
+	}
+	if _, isNull := o.NullFields[key]; isNull {
+		return mergedValues{nil}
+	}
+	return mergedValues{value}
 }
 
 // decodeJSONArray decodes the JSON array b into result: an object as an
