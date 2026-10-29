@@ -5,23 +5,21 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
-
-	"github.com/magicdrive/kirke/internal/common"
 )
 
 func generateInlineStruct(structName string, data OrderedMap, nullTypeName string) string {
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("type %s struct {\n", structName))
 
-	for _, keyName := range data.Keys {
-		fieldName := common.ToCamelCase(keyName)
+	for i, fieldName := range fieldNames(data.Keys) {
+		keyName := data.Keys[i]
 		fieldType, nestedFields := GoTypeForInline(fieldName, keyName, data.Map[keyName], data.NumberStrings,
 			data.BoolFields, data.NullFields, nullTypeName)
 
 		if nestedFields != "" {
-			sb.WriteString(fmt.Sprintf("\t%s struct {\n%s\t} `json:\"%s\"`\n", fieldName, nestedFields, keyName))
+			sb.WriteString(fmt.Sprintf("\t%s struct {\n%s\t} %s\n", fieldName, nestedFields, jsonTag(keyName)))
 		} else {
-			sb.WriteString(fmt.Sprintf("\t%s %s `json:\"%s\"`\n", fieldName, fieldType, keyName))
+			sb.WriteString(fmt.Sprintf("\t%s %s %s\n", fieldName, fieldType, jsonTag(keyName)))
 		}
 	}
 
@@ -46,34 +44,36 @@ func GoTypeForInline(fieldName string, keyName string, value interface{}, number
 
 	switch v := value.(type) {
 	case *OrderedMap:
-		return "", generateInlineFields(*v, nullTypeName)
+		return inlineStruct(generateInlineFields(*v, nullTypeName))
 	case map[string]interface{}:
 		nestedMap := OrderedMap{Map: v}
 		for k := range v {
 			nestedMap.Keys = append(nestedMap.Keys, k)
 		}
-		return "", generateInlineFields(nestedMap, nullTypeName)
+		return inlineStruct(generateInlineFields(nestedMap, nullTypeName))
+	case mergedValues:
+		elemType, representative, hasNull, ok := scalarArrayElemType(v, nullTypeName)
+		if ok {
+			return elemType, ""
+		}
+		fieldType, nestedFields := GoTypeForInline(fieldName, keyName, representative,
+			numberStrings, boolFields, nullFields, nullTypeName)
+		if nestedFields != "" && hasNull {
+			return "*struct {\n" + nestedFields + "\t}", ""
+		}
+		return nullableElem(fieldType, hasNull), nestedFields
 	case []interface{}:
 		if len(v) > 0 {
-			if elemType, ok := overflowArrayElemType(v); ok {
+			elemType, representative, hasNull, ok := scalarArrayElemType(v, nullTypeName)
+			if ok {
 				return "[]" + elemType, ""
 			}
-			if v[0] == nil {
-				// kirke used to panic here (reflect has no type for nil).
-				return "[]" + nullableInlineElemType(fieldName, keyName, v, numberStrings,
-					boolFields, nullFields, nullTypeName), ""
-			}
-			if _, ok := v[0].(json.Number); ok {
-				// Array numbers used to be decoded as float64; they keep
-				// that type.
-				return "[]float64", ""
-			}
 			elemType, nestedFields := GoTypeForInline(fieldName+"Item", keyName,
-				v[0], numberStrings, boolFields, nullFields, nullTypeName)
+				representative, numberStrings, boolFields, nullFields, nullTypeName)
 			if nestedFields != "" {
-				return "[]struct {\n" + nestedFields + "\t}", ""
+				return "[]" + nullableElem("struct {\n"+nestedFields+"\t}", hasNull), ""
 			}
-			return "[]" + elemType, ""
+			return "[]" + nullableElem(elemType, hasNull), ""
 		}
 		return "[]" + nullTypeName, ""
 	default:
@@ -81,46 +81,30 @@ func GoTypeForInline(fieldName string, keyName string, value interface{}, number
 	}
 }
 
-// nullableInlineElemType returns the element type of an array whose first
-// element is null: interface{} when every element is (as in outline
-// mode), else a pointer to the type of the first element that is not null
-// (*float64 for a number), so null decodes to nil and encodes back to null;
-// an array element stays a slice, which null already decodes to nil.
-func nullableInlineElemType(fieldName string, keyName string, values []interface{}, numberStrings map[string]string,
-	boolFields map[string]bool, nullFields map[string]string, nullTypeName string) string {
-	first := firstNonNull(values)
-	if first == nil {
-		return "interface{}"
-	}
-	if _, ok := first.(json.Number); ok {
-		return "*float64"
-	}
-	elemType, nestedFields := GoTypeForInline(fieldName+"Item", keyName,
-		first, numberStrings, boolFields, nullFields, nullTypeName)
-	switch {
-	case nestedFields != "":
-		return "*struct {\n" + nestedFields + "\t}"
-	case strings.HasPrefix(elemType, "[]"):
-		return elemType
-	default:
-		return "*" + elemType
-	}
-}
-
 func generateInlineFields(data OrderedMap, nullValue string) string {
 	var fields strings.Builder
 
-	for _, keyName := range data.Keys {
-		fieldName := common.ToCamelCase(keyName)
+	for i, fieldName := range fieldNames(data.Keys) {
+		keyName := data.Keys[i]
 		fieldType, nestedFields := GoTypeForInline(fieldName, keyName, data.Map[keyName], data.NumberStrings,
 			data.BoolFields, data.NullFields, nullValue)
 
 		if nestedFields != "" {
-			fields.WriteString(fmt.Sprintf("\t%s struct {\n%s\t} `json:\"%s\"`\n", fieldName, nestedFields, keyName))
+			fields.WriteString(fmt.Sprintf("\t%s struct {\n%s\t} %s\n", fieldName, nestedFields, jsonTag(keyName)))
 		} else {
-			fields.WriteString(fmt.Sprintf("\t%s %s `json:\"%s\"`\n", fieldName, fieldType, keyName))
+			fields.WriteString(fmt.Sprintf("\t%s %s %s\n", fieldName, fieldType, jsonTag(keyName)))
 		}
 	}
 
 	return fields.String()
+}
+
+// inlineStruct returns the nested fields of an inline struct, or the type
+// struct{} for an empty object, which had no type ("X `json:\"x\"`" did
+// not compile).
+func inlineStruct(fields string) (string, string) {
+	if fields == "" {
+		return "struct{}", ""
+	}
+	return "", fields
 }

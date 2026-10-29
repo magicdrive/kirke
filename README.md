@@ -88,20 +88,52 @@ Environment                         | Description                               
 `KIRKE_DEFAULT_POINTER_STRUCT_MODE` | Default of `--pointer-struct`. Only `on` and `off` are valid; other values are ignored.     | `off`
 `KIRKE_DEFAULT_AUTO_PAGER_MODE`     | Default of `--auto-pager`. Only `on` and `off` are valid; other values are ignored.         | `on`
 
-Number types
-------------
+Types
+-----
 
-JSON value                                                                                           | Go type
----------------------------------------------------------------------------------------------------- | -------------
-integer that fits in int64 (`42`)                                                                     | `int`
-larger integer (`9223372036854775808`)                                                                | `*big.Int`
-exponent without a fraction within the float64 range (`1e3`, `1e-400`)                                | `float64`
-fraction that float64 holds as written (`1.5`, `1.0`, `1.2e-4`)                                       | `float64`
-fraction that float64 changes (`3.141592653589793238462643383279`, `1.5e400`), number beyond float64 (`1e400`) | `json.Number` (keeps the literal)
-array holding a number beyond float64                                                                 | `[]json.Number` (`[]*json.Number` with a null, `[]json.RawMessage` with other kinds of values)
+Every JSON value is typed so that `json.Unmarshal` decodes it into the generated struct and `json.Marshal` encodes it back with the same value (numbers by value, see below), except where noted.
 
-"float64 holds as written" means that the shortest decimal form of its float64 value, which `json.Marshal` writes, has the value of the JSON literal.
+JSON value                                                      | Go type
+--------------------------------------------------------------- | ------------------------------------------------
+string, `true`/`false`                                          | `string`, `bool`
+`null`                                                          | `<null-type-name>` (`any`)
+object                                                          | a struct (a pointer with `--pointer-struct on`, outline only)
+integer that fits in int64 (`42`, `-0`)                         | `int`
+larger integer (`9223372036854775808`)                          | `*big.Int`
+fraction or exponent that float64 holds as written (`1.5`, `1.0`, `0.1`, `1e3`, `1.2e-4`) | `float64`
+fraction or exponent that float64 changes (`3.141592653589793238462643383279`, `1e400`, `1e-400`, `4e-324`) | `json.Number` (keeps the literal)
+array                                                           | a slice of one type for all its elements (below)
+
+"float64 holds as written" means that the shortest decimal form of its float64 value, which `json.Marshal` writes, has the value of the JSON literal (`1.0` is written `1`, `0.1` stays `0.1`).
 The generated code uses `json.Number` and `json.RawMessage` (package `encoding/json`) and `*big.Int` (package `math/big`) without the import declarations.
+
+### Arrays
+
+An array is typed from all of its elements, whatever their order, in both output modes:
+
+* Numbers: the first of `int`, `*big.Int` (all integers), `float64` (all held as written), `json.Number` that holds every one of them: `[1, 2]` is `[]int`, `[1, 2.5]` is `[]float64`, `[1, 9223372036854775808]` is `[]*big.Int`, `[0.1, 1e-400]` is `[]json.Number`.
+* Strings: `[]string`; booleans: `[]bool`.
+* Objects: one struct with the keys of all the objects, in the order they first appear. A key that several objects have is typed from all of its values, as array elements are: `[{"v": 1}, {"v": 2.5}, {"w": "a"}]` is a slice of `struct { V float64; W string }`.
+* Arrays: the elements of all of them: `[[1, 2], [3, 4.5]]` is `[][]float64`.
+* `null` among them makes the element a pointer: `[1, null]` is `[]*int`, `["a", null]` is `[]*string`, `[{...}, null]` is a slice of struct pointers; `*big.Int` and slices already are nil for `null`. The same holds for a key of merged objects: `[{"a": 1}, {"a": null}]` gives `A *int`.
+* Elements of different kinds (`[1, "a", true]`, `[{...}, 1]`): `[]interface{}`, or `[]json.RawMessage` when one of them is, or holds at any depth, a number float64 changes (`interface{}` would decode it into a float64).
+* Only `null`, or no element: `[]<null-type-name>`.
+
+### What is kept
+
+* The value of every number: `1e3` comes back as `1000` and `1.0` as `1` (`float64`, `int`), the same values. `json.Number` and `json.RawMessage` keep the literal as written. kirke does not keep how a number was written in other types.
+* A key that only some objects of an array have decodes into its zero value for the others, and `json.Marshal` writes that zero value: the generated struct does not tell a missing key from its zero value (nor from `null`, unless the type is a pointer).
+* `--null-as` with a type that cannot hold `null` (`string`, `int`) decodes `null` to its zero value.
+* `int` assumes a 64-bit `int`: on a 32-bit platform (`GOARCH=386`, `arm`) an integer beyond int32 does not decode into it; use `int64` there.
+
+### Names
+
+* A field is named after its key in camel case (`user_id` is `UserId`). A key that does not give a Go identifier keeps its letters, digits and underscores, each run starting with a capital letter, after an `X` when it would start with a digit or be empty (`$set` is `Set`, `my-key` is `MyKey`, `1st` is `X1st`, `_` is `X`); a name that would not be exported, which encoding/json ignores, also starts with `X` (`名前` is `X名前`); when an earlier key of the object gives the same name, a number is appended (`a_b` and `aB` are `AB` and `AB2`). The keys whose camel case already is a name are named first, so a converted key never takes their name (`{"_": 1, "x": 2}` gives `X2` and `X`). The JSON tag always has the key.
+* A key that appears more than once in one object is one field, typed from all of its values.
+* The empty key `""` gives an embedded field, as before: encoding/json matches no struct field with it, so its value is not decoded.
+* A key that encoding/json cannot match with a struct tag (one with a quote, a backslash, a comma, an apostrophe, a control character or a symbol such as an emoji) is an error that names the key, rather than a field that would stay empty. The key `-` is tagged `json:"-,"`.
+* Outline: a struct is named after its key (an array's element struct after the key and `Item`). When that name is already used in the output, by the root struct or by another struct, a number is appended (`Meta2`); a struct with the same name and the same fields is the same type. The structs that versions before arrays were typed from all elements generated (from an array's first element when it is not `null`) are named first, so their names do not change.
+* Inline: an empty object is `struct{}`.
 
 Examples
 --------

@@ -21,13 +21,26 @@ func Apply(jsonStr string, rootObjName string, OutPutMode int, withPointer bool,
 
 	structName := common.ToCamelCase(rootObjName)
 
-	structDef := func() string {
+	structDef, err := func() (def string, err error) {
+		// A key no struct field can decode stops the generation
+		// (unrepresentableKey); any other panic is a bug and goes on.
+		defer func() {
+			if r := recover(); r != nil {
+				k, ok := r.(unrepresentableKey)
+				if !ok {
+					panic(r)
+				}
+				err = k
+			}
+		}()
 		if OutPutMode == commandline.OutputModeInline {
-			return generateInlineStruct(structName, data, nullTypeName)
-		} else {
-			return generateOutlineStruct(structName, data, withPointer, nullTypeName)
+			return generateInlineStruct(structName, data, nullTypeName), nil
 		}
+		return generateOutlineStruct(structName, data, withPointer, nullTypeName), nil
 	}()
+	if err != nil {
+		return "", err
+	}
 
 	formattedCode, err := format.Source([]byte(structDef))
 	if err != nil {

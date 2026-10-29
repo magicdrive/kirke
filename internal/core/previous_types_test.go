@@ -1,13 +1,12 @@
 package core_test
 
-// The types of the JSON values whose generated code decoded them before
-// *big.Float and the numbers beyond float64 were fixed do not change: the
-// golden outputs under testdata/previous_types are what kirke d819f82
-// generated for these inputs (inline without the arrays starting with null,
-// which made it panic). They include outputs that remain to be revisited
-// (arrays of numbers typed []interface{} in outline mode and from their
-// first element in inline mode, 1e-400 typed float64), on purpose: changing
-// them is a separate decision.
+// The generated code for an input covering every kind of JSON value. The
+// golden outputs under testdata/previous_types were what kirke d819f82
+// generated for these inputs (inline without the arrays starting with
+// null, which made it panic); the changes from them are the contract
+// changes: arrays typed from all of their elements ([]int, []*float64, a
+// pointer to a struct with a null), and json.Number for a number float64
+// does not hold as written (1e-400, 12345678901234567890e0).
 
 import (
 	"os"
@@ -19,7 +18,7 @@ import (
 	"github.com/magicdrive/kirke/internal/core"
 )
 
-func TestApply_PreviousTypesUnchanged(t *testing.T) {
+func TestApply_GoldenTypes(t *testing.T) {
 	read := func(name string) string {
 		b, err := os.ReadFile(filepath.Join("testdata", "previous_types", name))
 		if err != nil {
