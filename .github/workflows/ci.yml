@@ -50,6 +50,10 @@ jobs:
           .github/release/verify-tag-provenance_test.sh
       - name: shellcheck
         run: shellcheck scripts/*.sh
+      - name: shellcheck install.sh
+        run: |
+          shellcheck --version | head -2
+          make shellcheck
 
   test:
     # Native tests on every OS kirke ships for (amd64 on Linux and Windows,
@@ -75,6 +79,26 @@ jobs:
           go-version: "1.27.3"
       - name: Install dependencies
         run: go mod download
+      # The install.sh tests (internal/installer) run the script with each shell
+      # and downloader named here, and with the BusyBox tools on Linux; one that
+      # is missing fails them instead of skipping it. Not on Windows.
+      - name: Install busybox and wget for the installer tests
+        if: runner.os != 'Windows'
+        run: |
+          if [ "$RUNNER_OS" = Linux ]; then
+            sudo apt-get update -q
+            sudo apt-get install -y -q busybox wget
+            {
+              # /bin/sh is dash on Ubuntu
+              echo "KIRKE_INSTALLER_SHELLS=sh bash bash-nonposix busybox"
+              echo "KIRKE_INSTALLER_BUSYBOX=required"
+            } >> "$GITHUB_ENV"
+          else
+            command -v wget >/dev/null || brew install wget
+            echo "KIRKE_INSTALLER_SHELLS=sh dash bash bash-nonposix ksh" >> "$GITHUB_ENV"
+          fi
+          echo "KIRKE_INSTALLER_DOWNLOADERS=curl wget" >> "$GITHUB_ENV"
+          curl --version | head -1; wget --version | head -1
       - name: Run tests
         if: runner.os != 'Windows'
         run: make test
@@ -118,7 +142,12 @@ jobs:
         with:
           # The release toolchain (builds[].env.GOTOOLCHAIN in hephaestus.yaml).
           go-version: "1.27.3"
+      # The install.sh tests run with every shell and downloader in `test`;
+      # -race checks only their Go side, so one shell and curl are enough here.
       - name: Race detector
+        env:
+          KIRKE_INSTALLER_SHELLS: sh
+          KIRKE_INSTALLER_DOWNLOADERS: curl
         run: make test-race
 
   test-go-min:
@@ -176,6 +205,14 @@ jobs:
           github-token: ""
       - name: Verify the release layout
         run: scripts/verify-dist.sh dist 0.0.0-SNAPSHOT
+      # install.sh installs this machine's archive from the snapshot, served
+      # as one release by a fake github.com (docs/installer.md)
+      - name: install.sh with the snapshot archives
+        env:
+          KIRKE_INSTALLER_DIST: ${{ github.workspace }}/dist
+          KIRKE_INSTALLER_SHELLS: sh
+          KIRKE_INSTALLER_DOWNLOADERS: curl
+        run: go test -count=1 -v -run '^TestDistArchives$' ./internal/installer/
       - name: Show artifacts
         env:
           ARTIFACTS: ${{ steps.snapshot.outputs.artifacts }}

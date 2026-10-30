@@ -366,9 +366,9 @@ func TestDocs_ReadmePaths(t *testing.T) {
 		}
 	}
 	// Only the links to blob/main are checked above: no other link form of
-	// this repository may point into it.
+	// this repository may point into it (the Releases page is not a path).
 	for _, m := range regexp.MustCompile(`https://github\.com/magicdrive/kirke/([^\s)]+)`).FindAllStringSubmatch(readme, -1) {
-		if !strings.HasPrefix(m[1], "blob/main/") && !strings.HasPrefix(m[1], "#") {
+		if !strings.HasPrefix(m[1], "blob/main/") && !strings.HasPrefix(m[1], "#") && m[1] != "releases" {
 			t.Errorf("README.md links to %s, not a blob/main/ path", m[0])
 		}
 	}
@@ -387,9 +387,15 @@ func TestDocs_ReadmeInstallNamesKirke(t *testing.T) {
 			t.Errorf("README.md Installation: %q names %s, not kirke", m[0], m[1])
 		}
 	}
-	for _, cmd := range []string{"go install github.com/magicdrive/kirke@latest", "brew install magicdrive/tap/kirke"} {
+	for _, cmd := range []string{"brew install magicdrive/tap/kirke",
+		"curl -fsSLO https://raw.githubusercontent.com/magicdrive/kirke/main/install.sh"} {
 		if !strings.Contains(section, cmd) {
 			t.Errorf("README.md Installation: no %q", cmd)
 		}
+	}
+	// `go install github.com/magicdrive/kirke@...` is not a supported way to
+	// install kirke
+	if strings.Contains(section, "go install") {
+		t.Error("README.md Installation mentions go install")
 	}
 }
