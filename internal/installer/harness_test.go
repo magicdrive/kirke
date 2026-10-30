@@ -227,13 +227,13 @@ func newFakeGitHub(t *testing.T) *fakeGitHub {
 			http.NotFound(w, r)
 			return
 		}
-		w.Write(body)
+		_, _ = w.Write(body) // the client's failures are the tests' to see
 	}))
 	t.Cleanup(func() {
 		close(g.release)
 		g.mu.Lock()
 		for _, c := range g.conns {
-			c.Close()
+			_ = c.Close()
 		}
 		g.mu.Unlock()
 		g.proxy.Close()
@@ -294,23 +294,23 @@ func (g *fakeGitHub) connect(w http.ResponseWriter, r *http.Request) {
 	}
 	src, buf, err := w.(http.Hijacker).Hijack()
 	if err != nil {
-		dst.Close()
+		_ = dst.Close()
 		return
 	}
 	g.mu.Lock()
 	g.conns = append(g.conns, src, dst)
 	g.mu.Unlock()
 	if _, err := src.Write([]byte("HTTP/1.1 200 Connection established\r\n\r\n")); err != nil {
-		src.Close()
-		dst.Close()
+		_ = src.Close()
+		_ = dst.Close()
 		return
 	}
 	go func() {
-		io.Copy(dst, bufio.NewReader(buf))
-		dst.Close()
+		_, _ = io.Copy(dst, bufio.NewReader(buf)) // a tunnel ends with an error when either side closes
+		_ = dst.Close()
 	}()
-	io.Copy(src, dst)
-	src.Close()
+	_, _ = io.Copy(src, dst)
+	_ = src.Close()
 }
 
 func (g *fakeGitHub) serve(w http.ResponseWriter, r *http.Request) {
@@ -394,7 +394,7 @@ func (g *fakeGitHub) answer(w http.ResponseWriter, f fault, body []byte) {
 	if f.truncate || f.stall {
 		w.Header().Set("Content-Length", fmt.Sprint(len(body)))
 		w.WriteHeader(status)
-		w.Write(body[:len(body)/2])
+		_, _ = w.Write(body[:len(body)/2])
 		w.(http.Flusher).Flush()
 		if f.stall {
 			<-g.release // the client gives up first (INSTALLER_TIMEOUT)
@@ -404,7 +404,7 @@ func (g *fakeGitHub) answer(w http.ResponseWriter, f fault, body []byte) {
 	}
 	w.Header().Set("Content-Length", fmt.Sprint(len(body)))
 	w.WriteHeader(status)
-	w.Write(body)
+	_, _ = w.Write(body)
 }
 
 // publish adds the releases of p, as GoReleaser makes them.
@@ -1039,6 +1039,14 @@ func downloaders(t *testing.T) []string {
 		out = append(out, n)
 	}
 	return out
+}
+
+// must fails the test on a failed set-up step.
+func must(t *testing.T, err error) {
+	t.Helper()
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 // isRoot: root ignores file permissions, so the permission tests do not apply.

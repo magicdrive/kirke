@@ -575,7 +575,7 @@ func TestDownloadFailures(t *testing.T) {
 			other := newFakeGitHub(t) // another CA
 			e.vars = append(e.vars, "CURL_CA_BUNDLE="+other.caFile, "SSL_CERT_FILE="+other.caFile)
 			wgetrc := filepath.Join(e.home, "other.wgetrc")
-			os.WriteFile(wgetrc, []byte("ca_certificate = "+other.caFile+"\n"), 0o644)
+			must(t, os.WriteFile(wgetrc, []byte("ca_certificate = "+other.caFile+"\n"), 0o644))
 			e.vars = append(e.vars, "WGETRC="+wgetrc)
 			r := e.run("--version", "v2.0.1")
 			checkFails(t, r, 1, "cannot download the checksum file")
@@ -874,8 +874,10 @@ func gz(t *testing.T, b []byte) []byte {
 	t.Helper()
 	var buf bytes.Buffer
 	w := gzip.NewWriter(&buf)
-	w.Write(b)
-	w.Close()
+	if _, err := w.Write(b); err != nil {
+		t.Fatal(err)
+	}
+	must(t, w.Close())
 	return buf.Bytes()
 }
 
@@ -906,8 +908,8 @@ func TestInstallDirectory(t *testing.T) {
 		t.Parallel()
 		e, _ := testEnv(t, toolset{})
 		target, before := withInstalled(t, e)
-		os.Chmod(e.defaultDir(), 0o555)
-		t.Cleanup(func() { os.Chmod(e.defaultDir(), 0o755) })
+		must(t, os.Chmod(e.defaultDir(), 0o555))
+		t.Cleanup(func() { _ = os.Chmod(e.defaultDir(), 0o755) })
 		r := e.run("--upgrade")
 		checkFails(t, r, 1, "is not writable (this installer does not use sudo)")
 		e.checkUnchanged(r, target, before)
@@ -920,8 +922,8 @@ func TestInstallDirectory(t *testing.T) {
 		t.Parallel()
 		e, _ := testEnv(t, toolset{})
 		ro := filepath.Join(e.home, "ro")
-		os.Mkdir(ro, 0o555)
-		t.Cleanup(func() { os.Chmod(ro, 0o755) })
+		must(t, os.Mkdir(ro, 0o555))
+		t.Cleanup(func() { _ = os.Chmod(ro, 0o755) })
 		r := e.run("--dir", filepath.Join(ro, "bin"))
 		checkFails(t, r, 1, "cannot create")
 		e.checkClean(r)
@@ -930,7 +932,7 @@ func TestInstallDirectory(t *testing.T) {
 		t.Parallel()
 		e, gh := testEnv(t, toolset{})
 		f := filepath.Join(e.home, "file")
-		os.WriteFile(f, []byte("x"), 0o644)
+		must(t, os.WriteFile(f, []byte("x"), 0o644))
 		r := e.run("--dir", f)
 		checkFails(t, r, 1, "is not a directory")
 		if _, c := gh.snapshot(); len(c) != 0 {
@@ -941,8 +943,8 @@ func TestInstallDirectory(t *testing.T) {
 		t.Parallel()
 		e, gh := testEnv(t, toolset{})
 		d := filepath.Join(e.home, "shared")
-		os.Mkdir(d, 0o777)
-		os.Chmod(d, 0o777|os.ModeSticky)
+		must(t, os.Mkdir(d, 0o777))
+		must(t, os.Chmod(d, 0o777|os.ModeSticky))
 		r := e.run("--dir", d)
 		checkFails(t, r, 1, "is writable by every user")
 		if _, c := gh.snapshot(); len(c) != 0 {
@@ -954,9 +956,9 @@ func TestInstallDirectory(t *testing.T) {
 		e, gh := testEnv(t, toolset{})
 		real := e.install(filepath.Join(e.home, "Cellar", "kirke", "2.0.0", "bin"), "v2.0.0")
 		dir := e.defaultDir()
-		os.MkdirAll(dir, 0o755)
+		must(t, os.MkdirAll(dir, 0o755))
 		link := filepath.Join(dir, "kirke")
-		os.Symlink(real, link)
+		must(t, os.Symlink(real, link))
 		before, beforeReal := stateOf(t, link), stateOf(t, real)
 		r := e.run("--upgrade")
 		checkFails(t, r, 1, "is a symbolic link")
@@ -970,8 +972,8 @@ func TestInstallDirectory(t *testing.T) {
 		t.Parallel()
 		e, _ := testEnv(t, toolset{})
 		dir := e.defaultDir()
-		os.MkdirAll(dir, 0o755)
-		os.Symlink(filepath.Join(e.home, "nowhere"), filepath.Join(dir, "kirke"))
+		must(t, os.MkdirAll(dir, 0o755))
+		must(t, os.Symlink(filepath.Join(e.home, "nowhere"), filepath.Join(dir, "kirke")))
 		checkFails(t, e.run(), 1, "is a symbolic link")
 		if _, err := os.Lstat(filepath.Join(e.home, "nowhere")); err == nil {
 			t.Fatal("the link target was created")
@@ -980,16 +982,16 @@ func TestInstallDirectory(t *testing.T) {
 	t.Run("target is a directory", func(t *testing.T) {
 		t.Parallel()
 		e, _ := testEnv(t, toolset{})
-		os.MkdirAll(filepath.Join(e.defaultDir(), "kirke"), 0o755)
+		must(t, os.MkdirAll(filepath.Join(e.defaultDir(), "kirke"), 0o755))
 		checkFails(t, e.run(), 1, "is not a regular file")
 	})
 	t.Run("directory is a symlink", func(t *testing.T) {
 		t.Parallel()
 		e, _ := testEnv(t, toolset{})
 		real := filepath.Join(e.home, "dotfiles", "bin")
-		os.MkdirAll(real, 0o755)
-		os.MkdirAll(filepath.Join(e.home, ".local"), 0o755)
-		os.Symlink(real, e.defaultDir())
+		must(t, os.MkdirAll(real, 0o755))
+		must(t, os.MkdirAll(filepath.Join(e.home, ".local"), 0o755))
+		must(t, os.Symlink(real, e.defaultDir()))
 		r := e.run()
 		checkOK(t, r, "Installed kirke v2.0.1")
 		e.checkInstalled(r, filepath.Join(real, "kirke"), "v2.0.1")
@@ -1006,7 +1008,7 @@ func TestInstallDirectory(t *testing.T) {
 	t.Run("relative TMPDIR", func(t *testing.T) {
 		t.Parallel()
 		e, _ := testEnv(t, toolset{})
-		os.Mkdir(filepath.Join(e.home, "reltmp"), 0o700)
+		must(t, os.Mkdir(filepath.Join(e.home, "reltmp"), 0o700))
 		e.vars = append(e.vars, "TMPDIR=reltmp")
 		r := e.run()
 		checkOK(t, r, "Installed kirke v2.0.1")
@@ -1018,8 +1020,8 @@ func TestInstallDirectory(t *testing.T) {
 		t.Parallel()
 		e, gh := testEnv(t, toolset{})
 		shared := filepath.Join(e.home, "shared")
-		os.Mkdir(shared, 0o777)
-		os.Chmod(shared, 0o777)
+		must(t, os.Mkdir(shared, 0o777))
+		must(t, os.Chmod(shared, 0o777))
 		r := e.run("--dir", filepath.Join(shared, "a", "bin"))
 		checkFails(t, r, 1, "is writable by every user")
 		if _, c := gh.snapshot(); len(c) != 0 {
@@ -1033,8 +1035,8 @@ func TestInstallDirectory(t *testing.T) {
 		t.Parallel()
 		e, gh := testEnv(t, toolset{})
 		shared := filepath.Join(e.home, "ww")
-		os.Mkdir(shared, 0o777)
-		os.Chmod(shared, 0o777)
+		must(t, os.Mkdir(shared, 0o777))
+		must(t, os.Chmod(shared, 0o777))
 		r := e.run("--dir", filepath.Join(e.home, "nope")+"/../ww/z")
 		checkFails(t, r, 1, "must not contain '..'")
 		if _, c := gh.snapshot(); len(c) != 0 {
@@ -1048,8 +1050,8 @@ func TestInstallDirectory(t *testing.T) {
 		t.Parallel()
 		e, gh := testEnv(t, toolset{})
 		shared := filepath.Join(e.home, "ww")
-		os.MkdirAll(filepath.Join(shared, "z"), 0o755)
-		os.Chmod(shared, 0o777)
+		must(t, os.MkdirAll(filepath.Join(shared, "z"), 0o755))
+		must(t, os.Chmod(shared, 0o777))
 		r := e.run("--dir", filepath.Join(shared, "z"))
 		checkFails(t, r, 1, "the directory above")
 		if _, c := gh.snapshot(); len(c) != 0 {
@@ -1060,8 +1062,8 @@ func TestInstallDirectory(t *testing.T) {
 		t.Parallel()
 		e, _ := testEnv(t, toolset{})
 		shared := filepath.Join(e.home, "sticky")
-		os.Mkdir(shared, 0o777)
-		os.Chmod(shared, 0o777|os.ModeSticky)
+		must(t, os.Mkdir(shared, 0o777))
+		must(t, os.Chmod(shared, 0o777|os.ModeSticky))
 		dir := filepath.Join(shared, "me", "bin")
 		r := e.run("--dir", dir)
 		checkOK(t, r, "Installed kirke v2.0.1")
@@ -1107,7 +1109,7 @@ func TestHomebrew(t *testing.T) {
 				}
 				// through a symbolic link to the prefix, too
 				link := filepath.Join(root, "link")
-				os.Symlink(dir, link)
+				must(t, os.Symlink(dir, link))
 				checkFails(t, e.run("--dir", link), 1, "inside the Homebrew prefix")
 			})
 		}
@@ -1116,7 +1118,7 @@ func TestHomebrew(t *testing.T) {
 		t.Parallel()
 		root := t.TempDir()
 		prefix := filepath.Join(root, "homebrew")
-		os.MkdirAll(prefix, 0o755)
+		must(t, os.MkdirAll(prefix, 0o755))
 		e, gh := testEnv(t, toolset{brewPrefix: prefix})
 		r := e.run("--dir", filepath.Join(prefix, "new", "bin"))
 		checkFails(t, r, 1, "inside the Homebrew prefix")
@@ -1153,7 +1155,7 @@ func TestHomebrew(t *testing.T) {
 		t.Parallel()
 		root := t.TempDir()
 		e, _ := testEnv(t, toolset{brewPrefix: filepath.Join(root, "homebrew")})
-		os.MkdirAll(filepath.Join(root, "homebrew"), 0o755)
+		must(t, os.MkdirAll(filepath.Join(root, "homebrew"), 0o755))
 		dir := filepath.Join(root, "homebrew-other", "bin") // shares a name prefix only
 		r := e.run("--dir", dir)
 		checkOK(t, r, "Installed kirke v2.0.1")
@@ -1180,7 +1182,7 @@ func TestInstallFailures(t *testing.T) {
 			e, _ := testEnv(t, toolset{fakes: c.fakes})
 			if strings.Contains(c.fakes["cat"], "head") {
 				if p, ok := lookTool("head"); ok {
-					os.Symlink(p, filepath.Join(e.bin, "head"))
+					must(t, os.Symlink(p, filepath.Join(e.bin, "head")))
 				}
 			}
 			target, before := withInstalled(t, e)
@@ -1197,7 +1199,7 @@ func TestInstallFailures(t *testing.T) {
 		e, _ := testEnv(t, toolset{})
 		target, _ := withInstalled(t, e)
 		e.tools.fakes = map[string]string{"chmod": mustTool("chmod") + ` "$@" && ` + mustTool("rm") + ` -f "` + target + `" && ` + mustTool("mkdir") + ` "` + target + `"`}
-		os.Remove(filepath.Join(e.bin, "chmod"))
+		must(t, os.Remove(filepath.Join(e.bin, "chmod")))
 		e.buildFake("chmod")
 		r := e.run("--upgrade")
 		checkFails(t, r, 1, "exists and is not a regular file")
@@ -1234,7 +1236,7 @@ func TestExistingInstallations(t *testing.T) {
 		t.Parallel()
 		e, _ := testEnv(t, toolset{})
 		dir := e.defaultDir()
-		os.MkdirAll(dir, 0o755)
+		must(t, os.MkdirAll(dir, 0o755))
 		writeExecutable(t, filepath.Join(dir, "kirke"), []byte("#!/bin/sh\necho something else\n"))
 		r := e.run()
 		checkOK(t, r, "(unknown version) with kirke v2.0.1")
@@ -1247,8 +1249,8 @@ func TestExistingInstallations(t *testing.T) {
 		t.Parallel()
 		e, _ := testEnv(t, toolset{})
 		dir := e.defaultDir()
-		os.MkdirAll(dir, 0o755)
-		os.WriteFile(filepath.Join(dir, "kirke"), []byte("data"), 0o644)
+		must(t, os.MkdirAll(dir, 0o755))
+		must(t, os.WriteFile(filepath.Join(dir, "kirke"), []byte("data"), 0o644))
 		r := e.run()
 		checkOK(t, r, "(unknown version)")
 		e.checkInstalled(r, filepath.Join(dir, "kirke"), "v2.0.1")
@@ -1257,8 +1259,8 @@ func TestExistingInstallations(t *testing.T) {
 		t.Parallel()
 		e, _ := testEnv(t, toolset{})
 		dir := e.defaultDir()
-		os.MkdirAll(dir, 0o755)
-		os.WriteFile(filepath.Join(dir, "kirke"), e.wantBinary("v2.0.1"), 0o644)
+		must(t, os.MkdirAll(dir, 0o755))
+		must(t, os.WriteFile(filepath.Join(dir, "kirke"), e.wantBinary("v2.0.1"), 0o644))
 		r := e.run()
 		checkOK(t, r, "(unknown version) with kirke v2.0.1")
 		e.checkInstalled(r, filepath.Join(dir, "kirke"), "v2.0.1")
@@ -1267,7 +1269,7 @@ func TestExistingInstallations(t *testing.T) {
 		t.Parallel()
 		e, _ := testEnv(t, toolset{})
 		dir := e.defaultDir()
-		os.MkdirAll(dir, 0o755)
+		must(t, os.MkdirAll(dir, 0o755))
 		writeExecutable(t, filepath.Join(dir, "kirke"), []byte("#!/bin/sh\necho 'kirke version v2.0.1'\n# modified\n"))
 		r := e.run()
 		checkOK(t, r, "Reinstalled kirke v2.0.1")
@@ -1278,7 +1280,7 @@ func TestExistingInstallations(t *testing.T) {
 		// id -u names someone else: the installed file is not run for its version
 		e, _ := testEnv(t, toolset{fakes: map[string]string{"id": "echo 4242424"}})
 		dir := e.defaultDir()
-		os.MkdirAll(dir, 0o755)
+		must(t, os.MkdirAll(dir, 0o755))
 		marker := filepath.Join(e.home, "ran")
 		writeExecutable(t, filepath.Join(dir, "kirke"), []byte("#!/bin/sh\ntouch '"+marker+"'\necho 'kirke version v2.0.0'\n"))
 		r := e.run()
@@ -1400,7 +1402,7 @@ func TestInterrupted(t *testing.T) {
 				}
 				time.Sleep(10 * time.Millisecond)
 			}
-			syscall.Kill(-cmd.Process.Pid, sig)
+			_ = syscall.Kill(-cmd.Process.Pid, sig) // it may have exited already
 			err := cmd.Wait()
 			if err == nil {
 				t.Fatalf("an interrupted run succeeded\n%s", out.String())
