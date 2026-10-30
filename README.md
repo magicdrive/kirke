@@ -77,8 +77,8 @@ sh install.sh --help
   `gh attestation verify kirke_<version>_<os>_<arch>.tar.gz -R magicdrive/kirke`
   (releases from v1.3.0 on have these attestations).
   The command above runs the script from the `main` branch; to run a fixed script, download it
-  from a release tag instead (`https://raw.githubusercontent.com/magicdrive/kirke/v1.5.0/install.sh`,
-  from v1.5.0 on). Piping it straight into `sh` (`curl ... | sh`) also works, but then you
+  from a release tag instead (`https://raw.githubusercontent.com/magicdrive/kirke/<tag>/install.sh`;
+  the tags from v1.5.0 on have it). Piping it straight into `sh` (`curl ... | sh`) also works, but then you
   run what you have not seen.
 - **Homebrew**: the script refuses Homebrew's directories (its prefix, e.g. `/opt/homebrew`, or
   `/usr/local` on an Intel Mac) and does not replace a symbolic link such as one Homebrew made.

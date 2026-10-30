@@ -60,8 +60,8 @@ Variables:
   github.com (not run in CI).
 
 `make shellcheck` checks the script with ShellCheck (`-s sh`). CI runs it with the ShellCheck
-of the Ubuntu runner image (0.9.0 on Ubuntu 24.04) and prints its version; the script is also
-kept free of warnings with ShellCheck 0.11.0.
+of the Ubuntu runner image and prints its version, which changes with the image (0.9.0 and
+0.11.0 have both been seen); the script has no warning with either.
 
 ## Known limits
 
