@@ -6,7 +6,9 @@ import (
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -1454,6 +1456,12 @@ func TestRealReleases(t *testing.T) {
 func TestReadmeCommands(t *testing.T) {
 	b, err := os.ReadFile(filepath.Join("..", "..", "README.md"))
 	if err != nil {
+		t.Fatal(err)
+	}
+	// and the translated README, when there is one
+	if ja, err := os.ReadFile(filepath.Join("..", "..", "README_ja.md")); err == nil {
+		b = append(append(b, '\n'), ja...)
+	} else if !errors.Is(err, fs.ErrNotExist) {
 		t.Fatal(err)
 	}
 	var cmds []string
