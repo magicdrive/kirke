@@ -97,6 +97,7 @@ sh install.sh --help
   if it persists; *release not found* — check the version on the
   [Releases page](https://github.com/magicdrive/kirke/releases); *inside the Homebrew prefix* —
   use `brew upgrade kirke`, or another `--dir`.
+
 Quick Start
 -----
 

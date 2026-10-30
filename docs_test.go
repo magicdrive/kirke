@@ -393,8 +393,9 @@ func TestDocs_ReadmeInstallNamesKirke(t *testing.T) {
 			t.Errorf("README.md Installation: no %q", cmd)
 		}
 	}
-	// `go install github.com/magicdrive/kirke@...` is not a supported way to
-	// install kirke
+	// The README does not document `go install github.com/magicdrive/kirke@...`
+	// (the maintainer's decision): Homebrew, the install script, the archives
+	// and building from a clone are the ways it shows.
 	if strings.Contains(section, "go install") {
 		t.Error("README.md Installation mentions go install")
 	}
