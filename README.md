@@ -17,19 +17,86 @@ Features
 Installation
 ------------
 
-To install `kirke`, clone the repository and build the binary:
-
-    git clone https://github.com/magicdrive/kirke.git
-    cd kirke
-    make install
-
-Alternatively, use `go install`:
-
-    go install github.com/magicdrive/kirke@latest
-
 You can install kirke using Homebrew (it also installs the Bash and Zsh completions):
 
     brew install magicdrive/tap/kirke
+    brew upgrade kirke                             # later, to update it
+
+Or clone the repository and build the binary (needs Go, see `go.mod`; the binary is
+`build/kirke`):
+
+    git clone https://github.com/magicdrive/kirke.git
+    cd kirke
+    make build
+
+Pre-built archives for macOS (amd64, arm64), Linux (386, amd64, arm64) and Windows (386, amd64,
+arm64) are on the [Releases page](https://github.com/magicdrive/kirke/releases), with
+`kirke_checksums.txt` (SHA-256) to check them against.
+
+### Install script (macOS and Linux, amd64 and arm64)
+
+Download the script, read it if you like, then run it with `sh`:
+
+```sh
+curl -fsSLO https://raw.githubusercontent.com/magicdrive/kirke/main/install.sh
+sh install.sh                                  # the latest release, into ~/.local/bin
+"$HOME/.local/bin/kirke" --version             # prints: kirke version vX.Y.Z
+```
+
+```sh
+sh install.sh                                  # install the latest release
+sh install.sh --version v1.3.0                 # install a given release (older ones too)
+sh install.sh --upgrade                        # switch to the latest stable release
+sh install.sh --upgrade --version v1.3.0       # switch to a given release (also a downgrade)
+sh install.sh --dir "$HOME/.local/bin"         # choose the directory (this is the default)
+sh install.sh --help
+```
+
+- **Where**: `$HOME/.local/bin/kirke` by default; `--dir DIR` installs `DIR/kirke` and creates
+  `DIR` if needed (spaces in `DIR` are fine). It never uses `sudo` and never changes `PATH` or
+  shell start-up files: if the script says the directory is not in `PATH`, add it, e.g.
+  `export PATH="$HOME/.local/bin:$PATH"` in `~/.profile`. For a system directory such as
+  `/usr/local/bin`, run it as a user who can write there (it does not ask for `sudo` itself).
+- **Versions**: without `--version` it installs the latest stable release (pre-releases are not
+  picked). `--version` takes a release tag, `v1.3.0` or `1.3.0`, newer or older than the
+  installed one; a version that does not exist is an error, never another version. `--upgrade`
+  is the same run, named for what you mean. Running it again with the installed version changes
+  nothing. Every kirke release can be installed (v0.0.1 and later).
+- **Updating**: run `sh install.sh --upgrade` again (with the same `--dir` if you used one).
+- **Checks**: the archive must match the SHA-256 listed in the release's checksum file
+  (`kirke_checksums.txt`); a missing or malformed checksum file stops the install. Only the
+  `kirke` binary is taken out of the archive, after its entries have been checked (no absolute
+  paths, `..`, links or devices). The new binary must run and report the version asked for
+  before it replaces the old one in a single rename: a failed or interrupted run leaves the
+  installed `kirke` as it was.
+- **Security**: every request starts at github.com, over https, and redirects (GitHub sends the
+  downloads to its asset host) are followed only to https. The checksum file comes from the same GitHub release as the archive, so it catches a
+  broken or altered download, but not a release that was itself replaced on GitHub. For a
+  stronger check, verify the archive's build provenance with the
+  [GitHub CLI](https://cli.github.com/) before you trust it:
+  `gh attestation verify kirke_<version>_<os>_<arch>.tar.gz -R magicdrive/kirke`
+  (releases from v1.3.0 on have these attestations).
+  The command above runs the script from the `main` branch; to run a fixed script, download it
+  from a release tag instead (`https://raw.githubusercontent.com/magicdrive/kirke/<tag>/install.sh`;
+  the tags from v1.5.0 on have it). Piping it straight into `sh` (`curl ... | sh`) also works, but then you
+  run what you have not seen.
+- **Homebrew**: the script refuses Homebrew's directories (its prefix, e.g. `/opt/homebrew`, or
+  `/usr/local` on an Intel Mac) and does not replace a symbolic link such as one Homebrew made.
+  Keep one way of installing: with Homebrew, upgrade with `brew upgrade kirke`; the script warns
+  if another `kirke` comes first in `PATH`.
+- **Uninstall**: delete the file: `rm "$HOME/.local/bin/kirke"` (or `DIR/kirke`).
+- **Needs**: a POSIX `sh`, `curl` (or GNU Wget 1.17+; BusyBox wget is refused because it does
+  not check certificates, and wget2 is not supported), `tar`, `gzip`, and `sha256sum`, `shasum`
+  or `openssl`. A proxy set in `https_proxy` is used. `INSTALLER_TIMEOUT` (seconds, default 60)
+  is how long it waits for a connection or more data.
+- **Windows**: the script does not run on Windows (Git Bash, MSYS2 and Cygwin are refused). Use
+  the `kirke_<version>_windows_<arch>.tar.gz` of the [Releases page](https://github.com/magicdrive/kirke/releases) (it holds `kirke.exe`). Inside WSL, the Linux instructions apply.
+- **Troubleshooting**: *not writable* — choose a directory of your own with `--dir`;
+  *not in PATH* — see above; *does not run in DIR (noexec)* — choose a directory on another file
+  system; *SHA-256 mismatch* or *rejected* — nothing was installed; try again later and report it
+  if it persists; *release not found* — check the version on the
+  [Releases page](https://github.com/magicdrive/kirke/releases); *inside the Homebrew prefix* —
+  use `brew upgrade kirke`, or another `--dir`.
 
 Quick Start
 -----
